@@ -138,7 +138,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
         catch (Exception e)
         {
             logger.LogWarning(e, "Failed to deserialize response to Straightforwardness response. Defaulting to empty response. {@Response}", response);
-            return new StraightforwardnessResponse() {SentenceRatings = Array.Empty<SentenceStraightforwardness>()};
+            return new StraightforwardnessResponse() { SentenceRatings = Array.Empty<SentenceStraightforwardness>() };
         }
     }
 }
