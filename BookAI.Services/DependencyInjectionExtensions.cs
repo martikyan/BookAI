@@ -3,9 +3,6 @@ using BookAI.Services.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Data;
-using OpenAI;
 using OpenAI.Chat;
 
 namespace BookAI.Services;

@@ -20,9 +20,9 @@ public class AIService(ChatClient chatClient)
 
                                  {chunk.Text}
                                  ```
-                                 """),
+                                 """)
         }, cancellationToken: cancellationToken);
-        
+
         var secondRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
@@ -35,14 +35,15 @@ public class AIService(ChatClient chatClient)
                                  ```
                                  """),
             new AssistantChatMessage(initialRequest.Value.Content[0].Text),
-            new UserChatMessage($"Please explain the following sentence in simple English: '{sentence}'\nYour output will be added as an endnote"),
+            new UserChatMessage($"Please explain the following sentence in simple English: '{sentence}'\nYour output will be added as an endnote")
         }, cancellationToken: cancellationToken);
 
         return new ExplanationResponse
         {
-            Explanation = secondRequest.Value.Content[0].Text,
+            Explanation = secondRequest.Value.Content[0].Text
         };
     }
+
     public async Task<StraightforwardnessResponse> EvaluateStraightforwardnessAsync(Chunk chunk, CancellationToken cancellationToken)
     {
         var initialRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
@@ -56,7 +57,7 @@ public class AIService(ChatClient chatClient)
                                  {chunk.Text}
                                  ```
 
-                                 """),
+                                 """)
         }, cancellationToken: cancellationToken);
 
         const string schemaJson = """
@@ -84,44 +85,45 @@ public class AIService(ChatClient chatClient)
 
 
         var chatResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("json_schema", BinaryData.FromString(schemaJson), jsonSchemaIsStrict: true);
-        
+
         var response = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
             new UserChatMessage("So, I sent you a text, what's going on?"),
             new AssistantChatMessage(initialRequest.Value.Content[0].Text),
             new UserChatMessage($"""
-                            I'm going to send you the text again, please highlight confusing sentences and provide a straightforwardness scores for some of the confusing sentences, which are hard to follow. Explain why are those sentences hard to understand.
-                            
-                            This is the previously appeared text for you to understand the text:
-                            ```
-                            {chunk.Context}
-                            ```
-                            
-                            This was the previously appeared text.
-                            
-                            Current text chunk:
-                            ```
-                            {chunk.Text}
-                            ```
+                                 I'm going to send you the text again, please highlight confusing sentences and provide a straightforwardness scores for some of the confusing sentences, which are hard to follow. Explain why are those sentences hard to understand.
 
-                            For each sentence, if the straightforwardness is 0 it means the sentence is very hard to grasp.
-                            If the straightforwardness is 10 the sentence is easy to read and understand.
+                                 This is the previously appeared text for you to understand the text:
+                                 ```
+                                 {chunk.Context}
+                                 ```
 
-                            Please return your result as a JSON object with "sentenceRatings" array that has objects with the following keys:
-                            - "sentense": (the sentence from the text chunk)
-                            - "straightforwardness": (a number between 0 and 10)
-                            - "explanation": (the explanation)
-                            """)}, new ChatCompletionOptions
+                                 This was the previously appeared text.
+
+                                 Current text chunk:
+                                 ```
+                                 {chunk.Text}
+                                 ```
+
+                                 For each sentence, if the straightforwardness is 0 it means the sentence is very hard to grasp.
+                                 If the straightforwardness is 10 the sentence is easy to read and understand.
+
+                                 Please return your result as a JSON object with "sentenceRatings" array that has objects with the following keys:
+                                 - "sentense": (the sentence from the text chunk)
+                                 - "straightforwardness": (a number between 0 and 10)
+                                 - "explanation": (the explanation)
+                                 """)
+        }, new ChatCompletionOptions
         {
-            ResponseFormat = chatResponseFormat,
-        }, cancellationToken: cancellationToken);
+            ResponseFormat = chatResponseFormat
+        }, cancellationToken);
 
         try
         {
             return JsonSerializer.Deserialize<StraightforwardnessResponse>(response.Value.Content[0].Text, new JsonSerializerOptions
             {
-                PropertyNameCaseInsensitive = true,
+                PropertyNameCaseInsensitive = true
             })!;
         }
         catch

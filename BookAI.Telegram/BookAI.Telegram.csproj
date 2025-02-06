@@ -12,6 +12,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\BookAI.Services\BookAI.Services.csproj" />
+        <ProjectReference Include="..\BookAI.Services\BookAI.Services.csproj"/>
     </ItemGroup>
 </Project>

@@ -1,10 +1,8 @@
-using System.Text;
-
 namespace BookAI.Services;
 
 public class EndnoteSequence
 {
-    private int _iterator = 0;
+    private int _iterator;
 
     public string GetNext()
     {

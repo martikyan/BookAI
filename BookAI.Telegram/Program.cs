@@ -1,6 +1,5 @@
-using BookAI.Telegram;
 using BookAI.Services;
-using EpubCore;
+using BookAI.Telegram;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddHostedService<Worker>();

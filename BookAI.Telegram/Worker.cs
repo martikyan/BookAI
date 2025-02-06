@@ -1,9 +1,3 @@
-using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Data;
-using BookAI.Services;
-using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
-
 namespace BookAI.Telegram;
 #pragma warning disable SKEXP0001
 
@@ -26,27 +20,25 @@ internal sealed class Worker(
     }
 
     /// <summary>
-    /// Contains the main chat loop for the application.
+    ///     Contains the main chat loop for the application.
     /// </summary>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken" /> to monitor for cancellation requests.</param>
     /// <returns>An async task that completes when the chat loop is shut down.</returns>
     private async Task ChatLoopAsync(CancellationToken cancellationToken)
     {
-        
     }
 
     /// <summary>
-    /// Load all configured PDFs into the vector store.
+    ///     Load all configured PDFs into the vector store.
     /// </summary>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/> to monitor for cancellation requests.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken" /> to monitor for cancellation requests.</param>
     /// <returns>An async task that completes when the loading is complete.</returns>
     private async Task LoadDataAsync(CancellationToken cancellationToken)
     {
         try
         {
             var file = File.OpenRead("/users/user/Downloads/The_Hitchhiker_39_s_Guide_to_the_G_-_Douglas_Adams_Non-Illustrated.epub");
-            Console.WriteLine($"Loading EPUB into vector store");
-            
+            Console.WriteLine("Loading EPUB into vector store");
         }
         catch (Exception ex)
         {

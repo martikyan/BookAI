@@ -3,7 +3,7 @@ using HtmlAgilityPack;
 
 namespace BookAI.Services;
 
-public class HtmlService()
+public class HtmlService
 {
     public string AddExplanation(string html, string resSentence, ExplanationResponse explanation, string sequence)
     {

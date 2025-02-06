@@ -1,27 +1,22 @@
-using System.Net.Mime;
 using System.Reflection;
 using System.Text;
 using BookAI.Services.Models;
 using EpubCore;
 using EpubCore.Format;
-using HtmlAgilityPack;
 
 namespace BookAI.Services;
 
 public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSequence endnoteSequence)
 {
     public const string EndnotesBookFileName = "endnotes.htm";
-    public readonly string RelativePath = $"OEBPS/{EndnotesBookFileName}";
     public readonly string AbsolutePath = $"/OEBPS/{EndnotesBookFileName}";
+    public readonly string RelativePath = $"OEBPS/{EndnotesBookFileName}";
 
     public async Task<string> SimplifyAsync(Stream epubStream, CancellationToken cancellationToken)
     {
         var book = GetBook(epubStream);
         var chunks = GetTextChunk(book);
-        foreach (var chunk in chunks)
-        {
-            await ProcessTextChunk(book, chunk, cancellationToken);
-        }
+        foreach (var chunk in chunks) await ProcessTextChunk(book, chunk, cancellationToken);
 
         return null; // todo: return the updated Epub file stream
     }
@@ -33,7 +28,6 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         if (evalResult != null)
         {
             foreach (var res in evalResult.SentenceRatings)
-            {
                 if (res.Straightforwardness < 10 && !string.IsNullOrEmpty(res.Explanation))
                 {
                     var explanation = await aiService.ExplainAsync(res.Sentence, chunk, cancellationToken);
@@ -44,7 +38,6 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
                     chunk.EpubTextFile.TextContent = htmlService.AddExplanation(chunk.EpubTextFile.TextContent, res.Sentence, explanation, seq);
                     endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq);
                 }
-            }
         }
     }
 
@@ -52,7 +45,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     {
         var lastHtml = epubBook.Resources.Html.Last();
 
-        if (lastHtml.FileName == "bookai_endnotes.html")
+        if (lastHtml.FileName == EndnotesBookFileName)
         {
             return lastHtml;
         }
@@ -62,23 +55,25 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
             FileName = EndnotesBookFileName,
             ContentType = EpubContentType.Xhtml11,
             TextContent = htmlService.GetEmptyEndnotesContent(),
-            Href = RelativePath, AbsolutePath = AbsolutePath, FullFilePath = RelativePath, 
+            Href = RelativePath,
+            AbsolutePath = AbsolutePath,
+            FullFilePath = RelativePath
         };
 
         epubBook.Resources.Html.Add(newFile);
-        epubBook.TableOfContents.Add(new EpubChapter()
+        epubBook.TableOfContents.Add(new EpubChapter
         {
             Title = "Endnotes",
             Previous = epubBook.TableOfContents.Last(),
             AbsolutePath = AbsolutePath,
-            RelativePath = RelativePath,
+            RelativePath = RelativePath
         });
         epubBook.TableOfContents.SkipLast(1).Last().Next = epubBook.TableOfContents.Last();
 
         var manifestItem = new OpfManifestItem();
         var spineRef = new OpfSpineItemRef();
         var navPoint = new NcxNavPoint();
-        
+
         SetInternalProperty(spineRef, "IdRef", EndnotesBookFileName);
         SetInternalProperty(spineRef, "Linear", true);
         SetInternalProperty(manifestItem, "Id", EndnotesBookFileName);
@@ -97,7 +92,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         return newFile;
     }
-    
+
     private void SetInternalProperty(object obj, string propertyName, object value)
     {
         var property = obj.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
@@ -122,7 +117,6 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
             var chunk = new StringBuilder();
 
             foreach (var paragraph in paragraphs)
-            {
                 if (chunk.Length + paragraph.Text.Length < 4000)
                 {
                     chunk.Append(paragraph.Text);
@@ -134,7 +128,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
                     {
                         Text = chunk.ToString(),
                         Context = previous?.Text,
-                        EpubTextFile = resource,
+                        EpubTextFile = resource
                     };
 
                     previous = paragraph;
@@ -142,7 +136,6 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
                     chunk.Append(paragraph.Text);
                     chunk.Append('\n');
                 }
-            }
         }
     }
 }

@@ -7,7 +7,7 @@ public static class StringUtils
     {
         return str.TrimStart(trimString).TrimEnd(trimString);
     }
-    
+
     public static string TrimStart(this string str, string trimString)
     {
         if (str.StartsWith(trimString))
@@ -17,7 +17,7 @@ public static class StringUtils
 
         return str;
     }
-    
+
     public static string TrimEnd(this string str, string trimString)
     {
         if (str.EndsWith(trimString))
