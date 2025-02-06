@@ -1,7 +1,9 @@
 using System.ClientModel;
 using BookAI.Services.Models;
+using BookAI.Services.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
 
@@ -12,12 +14,12 @@ public static class DependencyInjectionExtensions
     public static IServiceCollection AddServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<OpenAIOptions>()
-            .Bind(configuration.GetSection("OpenAI"));
+            .BindConfiguration("OpenAI");
 
         services.AddSingleton<HtmlService>();
-        services.AddSingleton<EpubService>();
-        services.AddSingleton<AIService>();
-        services.AddSingleton<EndnoteSequence>();
+        services.AddScoped<EpubService>();
+        services.AddScoped<AIService>();
+        services.AddScoped<EndnoteSequence>();
 
         services.AddSingleton(sp =>
         {

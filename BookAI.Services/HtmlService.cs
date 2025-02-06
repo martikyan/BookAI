@@ -1,37 +1,34 @@
 using BookAI.Services.Models;
 using HtmlAgilityPack;
+using Microsoft.Extensions.Logging;
 
 namespace BookAI.Services;
 
-public class HtmlService
+public class HtmlService(ILogger<HtmlService> logger)
 {
-    public string AddExplanation(string html, string resSentence, ExplanationResponse explanation, string sequence)
+    public string AddReference(string html, string sentence, ExplanationResponse explanation, string sequence)
     {
+        logger.LogDebug("Adding explanation to the HTML");
+
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
 
-        var node = htmlDocument.DocumentNode.SelectNodes($"//*[contains(., '{resSentence}')]").LastOrDefault();
-
+        var node = htmlDocument.DocumentNode.SelectNodes($"//*[contains(., '{sentence}')]").LastOrDefault();
         if (node == null)
         {
-            return null;
+            throw new InvalidOperationException("Failed to find the referenced sentence");
         }
 
-        // <a href="ch2.xhtml#id53" class="a">[1]</a>
         node.ChildNodes.Add(HtmlNode.CreateNode($"<a href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>"));
         return htmlDocument.DocumentNode.OuterHtml;
     }
 
     public IEnumerable<Paragraph> GetPlainText(string html)
     {
-        if (string.IsNullOrEmpty(html))
-        {
-            throw new ArgumentException("HTML content cannot be null or empty", nameof(html));
-        }
-
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
 
+        // todo: fix case when paragraphs are not html paragraph tags
         var paragraphNodes = htmlDocument.DocumentNode.SelectNodes("//p");
 
         if (paragraphNodes == null || paragraphNodes.Count == 0)
@@ -46,21 +43,23 @@ public class HtmlService
                 continue;
             }
 
-            yield return new Paragraph { Text = paragraphNode.InnerText, HtmlNode = paragraphNode };
+            yield return new Paragraph { Text = paragraphNode.InnerText };
         }
     }
 
     public string AddEndnote(string endnote, string endnotesChapterTextContent, string sequence)
     {
+        logger.LogDebug("Adding endnote to the chapter HTML");
+
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(endnotesChapterTextContent);
 
         var endnotes = htmlDocument.GetElementbyId("endnotes");
-        endnotes.ChildNodes.Add(HtmlNode.CreateNode($"<p id=\"{sequence}\">{sequence}: {endnote}</p>"));
+        endnotes.ChildNodes.Add(HtmlNode.CreateNode($"<p id=\"{sequence}\">{sequence}: {endnote}</p>")); // todo: make sequence to reference back the original sentence
         return htmlDocument.DocumentNode.OuterHtml;
     }
 
-    public string GetEmptyEndnotesContent()
+    public static string GetEmptyEndnotesContent()
     {
         return """
                <!DOCTYPE html>
@@ -72,10 +71,4 @@ public class HtmlService
                </body>
                """;
     }
-}
-
-public class Paragraph
-{
-    public string Text { get; set; }
-    public HtmlNode HtmlNode { get; set; }
 }

@@ -1,15 +1,18 @@
 using System.Text.Json;
 using BookAI.Services.Models;
+using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 using ChatResponseFormat = OpenAI.Chat.ChatResponseFormat;
 
 namespace BookAI.Services;
 
-public class AIService(ChatClient chatClient)
+public class AIService(ChatClient chatClient, ILogger<AIService> logger)
 {
     public async Task<ExplanationResponse> ExplainAsync(string sentence, Chunk chunk, CancellationToken cancellationToken)
     {
+        logger.LogDebug("Sending explanation initial request");
+
         var initialRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
@@ -23,6 +26,8 @@ public class AIService(ChatClient chatClient)
                                  """)
         }, cancellationToken: cancellationToken);
 
+        logger.LogDebug("Sending explanation secondary request");
+
         var secondRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
@@ -35,7 +40,7 @@ public class AIService(ChatClient chatClient)
                                  ```
                                  """),
             new AssistantChatMessage(initialRequest.Value.Content[0].Text),
-            new UserChatMessage($"Please explain the following sentence in simple English: '{sentence}'\nYour output will be added as an endnote")
+            new UserChatMessage($"Please explain the following sentence in simple language: '{sentence}'\nYour output will be added as an endnote.\nEndnote:")
         }, cancellationToken: cancellationToken);
 
         return new ExplanationResponse
@@ -46,6 +51,8 @@ public class AIService(ChatClient chatClient)
 
     public async Task<StraightforwardnessResponse> EvaluateStraightforwardnessAsync(Chunk chunk, CancellationToken cancellationToken)
     {
+        logger.LogDebug("Sending initial straightforwardness request");
+
         var initialRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
@@ -85,6 +92,8 @@ public class AIService(ChatClient chatClient)
 
 
         var chatResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("json_schema", BinaryData.FromString(schemaJson), jsonSchemaIsStrict: true);
+
+        logger.LogDebug("Sending secondary straightforwardness request");
 
         var response = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
@@ -126,10 +135,10 @@ public class AIService(ChatClient chatClient)
                 PropertyNameCaseInsensitive = true
             })!;
         }
-        catch
+        catch (Exception e)
         {
-            Console.WriteLine("Something went wrong");
-            return null;
+            logger.LogWarning(e, "Failed to deserialize response to Straightforwardness response. Defaulting to empty response. {@Response}", response);
+            return new StraightforwardnessResponse() {SentenceRatings = Array.Empty<SentenceStraightforwardness>()};
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace BookAI.Services.Models;
+namespace BookAI.Services.Options;
 
 public class OpenAIOptions
 {

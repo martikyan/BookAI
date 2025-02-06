@@ -3,41 +3,51 @@ using System.Text;
 using BookAI.Services.Models;
 using EpubCore;
 using EpubCore.Format;
+using Microsoft.Extensions.Logging;
 
 namespace BookAI.Services;
 
-public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSequence endnoteSequence)
+public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSequence endnoteSequence, ILogger<EpubService> logger)
 {
     public const string EndnotesBookFileName = "endnotes.htm";
-    public readonly string AbsolutePath = $"/OEBPS/{EndnotesBookFileName}";
     public readonly string RelativePath = $"OEBPS/{EndnotesBookFileName}";
+    public readonly string AbsolutePath = $"/OEBPS/{EndnotesBookFileName}";
 
-    public async Task<string> SimplifyAsync(Stream epubStream, CancellationToken cancellationToken)
+    public async Task<EpubBook> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken)
     {
-        var book = GetBook(epubStream);
-        var chunks = GetTextChunk(book);
-        foreach (var chunk in chunks) await ProcessTextChunk(book, chunk, cancellationToken);
+        logger.LogDebug("Processing EPUB book");
 
-        return null; // todo: return the updated Epub file stream
+        var book = GetBook(epubStream);
+        
+        logger.LogInformation("Parsed book {Title}", book.Title);
+
+        var chunks = GetTextChunk(book);
+        foreach (var chunk in chunks)
+        {
+            await ProcessTextChunk(book, chunk, cancellationToken);
+        }
+
+        return book;
     }
 
     private async Task ProcessTextChunk(EpubBook book, Chunk chunk, CancellationToken cancellationToken)
     {
+        logger.LogDebug("Processing text chunk");
+
         var evalResult = await aiService.EvaluateStraightforwardnessAsync(chunk, cancellationToken);
 
-        if (evalResult != null)
+        foreach (var res in evalResult.SentenceRatings)
         {
-            foreach (var res in evalResult.SentenceRatings)
-                if (res.Straightforwardness < 10 && !string.IsNullOrEmpty(res.Explanation))
-                {
-                    var explanation = await aiService.ExplainAsync(res.Sentence, chunk, cancellationToken);
+            if (res.Straightforwardness < 3 && !string.IsNullOrEmpty(res.Explanation)) // todo: make 10 configurable
+            {
+                var explanation = await aiService.ExplainAsync(res.Sentence, chunk, cancellationToken);
 
-                    var endnotesChapter = GetEndnotesChapter(book);
-                    var seq = endnoteSequence.GetNext();
+                var endnotesChapter = GetEndnotesChapter(book);
+                var seq = endnoteSequence.GetNext();
 
-                    chunk.EpubTextFile.TextContent = htmlService.AddExplanation(chunk.EpubTextFile.TextContent, res.Sentence, explanation, seq);
-                    endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq);
-                }
+                chunk.EpubTextFile.TextContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Sentence, explanation, seq);
+                endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq);
+            }
         }
     }
 
@@ -47,14 +57,16 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         if (lastHtml.FileName == EndnotesBookFileName)
         {
+            logger.LogDebug("Endnotes chapter found");
             return lastHtml;
         }
 
+        logger.LogDebug("Creating a new endnotes chapter");
         var newFile = new EpubTextFile
         {
             FileName = EndnotesBookFileName,
             ContentType = EpubContentType.Xhtml11,
-            TextContent = htmlService.GetEmptyEndnotesContent(),
+            TextContent = HtmlService.GetEmptyEndnotesContent(),
             Href = RelativePath,
             AbsolutePath = AbsolutePath,
             FullFilePath = RelativePath
@@ -110,20 +122,21 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     public IEnumerable<Chunk> GetTextChunk(EpubBook book)
     {
         Paragraph? previous = null;
-        foreach (var resource in book.Resources.Html)
+        foreach (var resource in book.Resources.Html.ToList())
         {
             var paragraphs = htmlService.GetPlainText(resource.TextContent);
 
             var chunk = new StringBuilder();
 
             foreach (var paragraph in paragraphs)
-                if (chunk.Length + paragraph.Text.Length < 4000)
+                if (chunk.Length + paragraph.Text.Length < 4000) // todo: make this a config
                 {
                     chunk.Append(paragraph.Text);
                     chunk.Append('\n');
                 }
                 else
                 {
+                    // todo: modify this method to constructs all chunks and then return to use it later in percentage estimation
                     yield return new Chunk
                     {
                         Text = chunk.ToString(),
@@ -132,9 +145,8 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
                     };
 
                     previous = paragraph;
-                    chunk = new StringBuilder(); // empty current chunk reference
-                    chunk.Append(paragraph.Text);
-                    chunk.Append('\n');
+                    chunk = new StringBuilder();
+                    chunk.AppendLine(paragraph.Text);
                 }
         }
     }
