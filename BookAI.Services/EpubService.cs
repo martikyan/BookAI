@@ -12,6 +12,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     public const string EndnotesBookFileName = "endnotes.htm";
     public readonly string RelativePath = $"OEBPS/{EndnotesBookFileName}";
     public readonly string AbsolutePath = $"/OEBPS/{EndnotesBookFileName}";
+    private readonly Lock _lock = new();
 
     public async Task<EpubBook> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken)
     {
@@ -22,19 +23,22 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         logger.LogInformation("Parsed book {Title}", book.Title);
 
         var chunks = GetTextChunk(book);
-        foreach (var (index, chunk) in chunks.Index())
+        var processedChunks = 0;
+
+        await Parallel.ForEachAsync(chunks, async (chunk, cancellationToken) =>
         {
-            logger.LogInformation("Progress: {Progress:F0}%", 100.0 * index / chunks.Count);
+            logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
 
             try
             {
                 await ProcessTextChunk(book, chunk, cancellationToken);
+                Interlocked.Increment(ref processedChunks);
             }
             catch (Exception e)
             {
                 logger.LogError(e, "Failed to process text chunk");
             }
-        }
+        });
         
         logger.LogInformation("Finished processing EPUB book");
 
@@ -49,15 +53,18 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         foreach (var res in evalResult.TextConfusionScores)
         {
-            if (res.ConfusionScore > 5) // todo: make 5 configurable
+            if (res.ConfusionScore > 7) // todo: make 5 configurable
             {
                 var explanation = await aiService.ExplainAsync(res.Text, chunk, cancellationToken);
 
-                var endnotesChapter = GetEndnotesChapter(book);
-                var seq = endnoteSequence.GetNext();
+                lock (_lock)
+                {
+                    var seq = endnoteSequence.GetNext();
+                    var endnotesChapter = GetEndnotesChapter(book);
 
-                chunk.EpubTextFile.TextContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Text, seq);
-                endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq);
+                    chunk.EpubTextFile.TextContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Text, seq);
+                    endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq);
+                }
             }
         }
     }
