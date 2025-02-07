@@ -17,12 +17,14 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
         {
             new SystemChatMessage("You are a text assistant."),
             new UserChatMessage($"""
-                                 I'm going to send you text, please briefly explain what it is about:
+                                 I'm going to send you text, please briefly explain what it is about so I can easily understand:
                                  ```
                                  {chunk.Context}
 
                                  {chunk.Text}
                                  ```
+                                 
+                                 Specifically the sentence '{sentence}' seems a little confusing.
                                  """)
         }, cancellationToken: cancellationToken);
 
@@ -31,57 +33,34 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
         var secondRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
-            new UserChatMessage($"""
-                                 I'm going to send you text, please briefly explain what it is about:
-                                 ```
-                                 {chunk.Context}
-
-                                 {chunk.Text}
-                                 ```
-                                 """),
             new AssistantChatMessage(initialRequest.Value.Content[0].Text),
-            new UserChatMessage($"Please explain the following sentence in simple language: '{sentence}'\nYour output will be added as an endnote.\nEndnote:")
+            new UserChatMessage($"Based on the above explanation, please provide a simple footnote explanation for the following sentence: '{sentence}'\nYour output will be placed as a footnote.\nFootnote:")
         }, cancellationToken: cancellationToken);
+
+        var explanation = secondRequest.Value.Content[0].Text.Trim().Trim(StringComparison.OrdinalIgnoreCase, "Footnote:", "**Footnote**", "*Footnote*", ":", "**Footnote:**", "*Footnote:*").Trim();
 
         return new ExplanationResponse
         {
-            Explanation = secondRequest.Value.Content[0].Text
+            Explanation = explanation
         };
     }
 
-    public async Task<StraightforwardnessResponse> EvaluateStraightforwardnessAsync(Chunk chunk, CancellationToken cancellationToken)
+    public async Task<ConfusionResponse> EvaluateConfusionAsync(Chunk chunk, CancellationToken cancellationToken)
     {
-        logger.LogDebug("Sending initial straightforwardness request");
-
-        var initialRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
-        {
-            new SystemChatMessage("You are a text assistant."),
-            new UserChatMessage($"""
-                                 I'm going to send you text, please briefly explain what it is about:
-                                 ```
-                                 {chunk.Context}
-
-                                 {chunk.Text}
-                                 ```
-
-                                 """)
-        }, cancellationToken: cancellationToken);
-
         const string schemaJson = """
                                   {
-                                      "required": ["sentenceRatings"],
+                                      "required": ["textConfusionScores"],
                                       "type": "object",
                                       "properties": {
-                                          "sentenceRatings": {
+                                          "textConfusionScores": {
                                               "type": "array",
                                               "items": {
                                                   "type": "object",
                                                   "properties": {
-                                                      "sentence": { "type": "string" },
-                                                      "straightforwardness": { "type": "integer" },
-                                                      "explanation": { "type": ["string","null"] }
+                                                      "text": { "type": "string" },
+                                                      "confusionScore": { "type": "integer" }
                                                   },
-                                                  "required": ["sentence", "straightforwardness", "explanation"],
+                                                  "required": ["text", "confusionScore"],
                                                   "additionalProperties": false
                                               }
                                           }
@@ -93,35 +72,30 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
 
         var chatResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("json_schema", BinaryData.FromString(schemaJson), jsonSchemaIsStrict: true);
 
-        logger.LogDebug("Sending secondary straightforwardness request");
+        logger.LogDebug("Sending confusion request");
 
         var response = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
-            new UserChatMessage("So, I sent you a text, what's going on?"),
-            new AssistantChatMessage(initialRequest.Value.Content[0].Text),
             new UserChatMessage($"""
-                                 I'm going to send you the text again, please highlight confusing sentences and provide a straightforwardness scores for some of the confusing sentences, which are hard to follow. Explain why are those sentences hard to understand.
+                                 I'm going to send you text chunk. Please briefly explain what it is about and then highlight confusing sentences and provide confusion scores for some of the confusing ones, which are hard to follow or understand.
 
-                                 This is the previously appeared text for you to understand the text:
+                                 Previously appeared text for you to understand the text:
                                  ```
                                  {chunk.Context}
                                  ```
-
-                                 This was the previously appeared text.
 
                                  Current text chunk:
                                  ```
                                  {chunk.Text}
                                  ```
 
-                                 For each sentence, if the straightforwardness is 0 it means the sentence is very hard to grasp.
-                                 If the straightforwardness is 10 the sentence is easy to read and understand.
+                                 For each sentence or text part in current text chunk, if the confusion is 10 then it is very hard to grasp.
+                                 For each sentence or text part in current text chunk, if the confusion is 0 then is easy to read and understand.
 
-                                 Please return your result as a JSON object with "sentenceRatings" array that has objects with the following keys:
-                                 - "sentense": (the sentence from the text chunk)
-                                 - "straightforwardness": (a number between 0 and 10)
-                                 - "explanation": (the explanation)
+                                 Please return your result as a JSON object with "textConfusionScores" array that has objects with the following keys:
+                                 - "text": (the part from the text chunk that is confusing, can be a sentence or any part really)
+                                 - "confusionScore": (a number from 0 to 10)
                                  """)
         }, new ChatCompletionOptions
         {
@@ -130,15 +104,15 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
 
         try
         {
-            return JsonSerializer.Deserialize<StraightforwardnessResponse>(response.Value.Content[0].Text, new JsonSerializerOptions
+            return JsonSerializer.Deserialize<ConfusionResponse>(response.Value.Content[0].Text, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             })!;
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "Failed to deserialize response to Straightforwardness response. Defaulting to empty response. {@Response}", response);
-            return new StraightforwardnessResponse() { SentenceRatings = Array.Empty<SentenceStraightforwardness>() };
+            logger.LogWarning(e, "Failed to deserialize response to confusion response. Defaulting to empty response. {@Response}", response);
+            return new ConfusionResponse() { TextConfusionScores = Array.Empty<TextConfusionScore>() };
         }
     }
 }

@@ -22,10 +22,21 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         logger.LogInformation("Parsed book {Title}", book.Title);
 
         var chunks = GetTextChunk(book);
-        foreach (var chunk in chunks)
+        foreach (var (index, chunk) in chunks.Index())
         {
-            await ProcessTextChunk(book, chunk, cancellationToken);
+            logger.LogInformation("Progress: {Progress:F0}%", 100.0 * index / chunks.Count);
+
+            try
+            {
+                await ProcessTextChunk(book, chunk, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to process text chunk");
+            }
         }
+        
+        logger.LogInformation("Finished processing EPUB book");
 
         return book;
     }
@@ -34,18 +45,18 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     {
         logger.LogDebug("Processing text chunk");
 
-        var evalResult = await aiService.EvaluateStraightforwardnessAsync(chunk, cancellationToken);
+        var evalResult = await aiService.EvaluateConfusionAsync(chunk, cancellationToken);
 
-        foreach (var res in evalResult.SentenceRatings)
+        foreach (var res in evalResult.TextConfusionScores)
         {
-            if (res.Straightforwardness < 3 && !string.IsNullOrEmpty(res.Explanation)) // todo: make 10 configurable
+            if (res.ConfusionScore > 5) // todo: make 5 configurable
             {
-                var explanation = await aiService.ExplainAsync(res.Sentence, chunk, cancellationToken);
+                var explanation = await aiService.ExplainAsync(res.Text, chunk, cancellationToken);
 
                 var endnotesChapter = GetEndnotesChapter(book);
                 var seq = endnoteSequence.GetNext();
 
-                chunk.EpubTextFile.TextContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Sentence, explanation, seq);
+                chunk.EpubTextFile.TextContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Text, seq);
                 endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq);
             }
         }
@@ -119,10 +130,12 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         return EpubReader.Read(inputStream, false);
     }
 
-    public IEnumerable<Chunk> GetTextChunk(EpubBook book)
+    public IList<Chunk> GetTextChunk(EpubBook book)
     {
+        var result = new List<Chunk>();
         Paragraph? previous = null;
-        foreach (var resource in book.Resources.Html.ToList())
+
+        foreach (var resource in book.Resources.Html)
         {
             var paragraphs = htmlService.GetPlainText(resource.TextContent);
 
@@ -136,18 +149,19 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
                 }
                 else
                 {
-                    // todo: modify this method to constructs all chunks and then return to use it later in percentage estimation
-                    yield return new Chunk
+                    result.Add(new Chunk
                     {
                         Text = chunk.ToString(),
                         Context = previous?.Text,
                         EpubTextFile = resource
-                    };
+                    });
 
                     previous = paragraph;
                     chunk = new StringBuilder();
                     chunk.AppendLine(paragraph.Text);
                 }
         }
+
+        return result;
     }
 }

@@ -6,7 +6,7 @@ namespace BookAI.Services;
 
 public class HtmlService(ILogger<HtmlService> logger)
 {
-    public string AddReference(string html, string sentence, ExplanationResponse explanation, string sequence)
+    public string AddReference(string html, string sentence, string sequence)
     {
         logger.LogDebug("Adding explanation to the HTML");
 
@@ -28,7 +28,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
 
-        // todo: fix case when paragraphs are not html paragraph tags
+        // todo: fix the case when paragraphs are not html paragraph tags
         var paragraphNodes = htmlDocument.DocumentNode.SelectNodes("//p");
 
         if (paragraphNodes == null || paragraphNodes.Count == 0)
