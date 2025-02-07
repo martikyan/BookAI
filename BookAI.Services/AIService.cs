@@ -94,7 +94,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
                                  For each sentence or text part in current text chunk, if the confusion is 0 then is easy to read and understand.
 
                                  Please return your result as a JSON object with "textConfusionScores" array that has objects with the following keys:
-                                 - "text": (the part from the text chunk that is confusing, can be a sentence or any part really)
+                                 - "text": (the part from the text chunk that is confusing, can be a sentence or text part, but shall be precisely as it is in the text chunk)
                                  - "confusionScore": (a number from 0 to 10)
                                  """)
         }, new ChatCompletionOptions
