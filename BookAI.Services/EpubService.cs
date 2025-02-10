@@ -71,7 +71,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
                     var endnotesChapter = GetEndnotesChapter(book);
 
                     chunk.EpubTextFile.TextContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Text, seq);
-                    endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq);
+                    endnotesChapter.TextContent = htmlService.AddEndnote(explanation.Explanation, endnotesChapter.TextContent, seq, Path.GetFileName(chunk.EpubTextFile.AbsolutePath));
                 }
             }
         }

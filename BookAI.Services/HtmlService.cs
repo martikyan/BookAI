@@ -35,8 +35,8 @@ public class HtmlService(ILogger<HtmlService> logger)
             node = htmlDocument.DocumentNode;
         }
         
-        var nodeNeedsSplitting = sentence.Length < node.InnerText.Length / 3;
-        var nodeToInsert = HtmlNode.CreateNode($"<a href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>");
+        var nodeNeedsSplitting = sentence.Length < node.InnerText.Length / 2;
+        var nodeToInsert = HtmlNode.CreateNode($"<a id=\"{sequence}\" href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>");
 
         if (nodeNeedsSplitting)
         {
@@ -77,7 +77,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         }
     }
 
-    public string AddEndnote(string endnote, string endnotesChapterTextContent, string sequence)
+    public string AddEndnote(string endnote, string endnotesChapterTextContent, string sequence, string referenceFileName)
     {
         logger.LogDebug("Adding endnote to the chapter HTML");
 
@@ -86,7 +86,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         htmlDocument.OptionWriteEmptyNodes = true;
         
         var endnotes = htmlDocument.GetElementbyId("endnotes");
-        endnotes.ChildNodes.Add(HtmlNode.CreateNode($"<p id=\"{sequence}\">{sequence}: {endnote}</p>")); // todo: make sequence to reference back the original sentence
+        endnotes.ChildNodes.Add(HtmlNode.CreateNode($"<p id=\"{sequence}\"><a href=\"{referenceFileName}#{sequence}\">[{sequence}]</a> {endnote}</p>"));
         return htmlDocument.DocumentNode.OuterHtml;
     }
 
