@@ -2,5 +2,6 @@ namespace BookAI.Services.Models;
 
 public class ExplanationResponse
 {
-    public string Explanation { get; init; }
+    public string ContextExplanation { get; set; }
+    public string SentenceExplanation { get; set; }
 }

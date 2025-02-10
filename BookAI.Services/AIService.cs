@@ -11,38 +11,68 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
 {
     public async Task<ExplanationResponse> ExplainAsync(string sentence, Chunk chunk, CancellationToken cancellationToken)
     {
-        logger.LogDebug("Sending explanation initial request");
+        logger.LogDebug("Sending explanation request");
 
-        var initialRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
+        const string schemaJson = """
+                                  {
+                                      "required": ["contextExplanation", "sentenceExplanation"],
+                                      "type": "object",
+                                      "properties": {
+                                          "contextExplanation": {
+                                              "type": "string"
+                                          },
+                                          "sentenceExplanation": {
+                                            "type": "string"
+                                          }
+                                      },
+                                      "additionalProperties": false
+                                  }
+                                  """;
+
+
+        var chatResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("json_schema", BinaryData.FromString(schemaJson), jsonSchemaIsStrict: true);
+
+        var response = await chatClient.CompleteChatAsync(new ChatMessage[]
         {
             new SystemChatMessage("You are a text assistant."),
             new UserChatMessage($"""
                                     I'm going to send you a piece of text. Please explain what it is about in clear, everyday language. Avoid using the same technical terms or phrases found in the original text—rephrase ideas into simple, accessible words that any reader can understand.
+                                    Context:
                                     ```
                                     {chunk.Context}
                                  
                                     {chunk.Text}
                                     ```
                                  
-                                    Also, please clarify the meaning of the following sentence, as it appears particularly confusing: '{sentence}'.
+                                    Also, please clarify the meaning of the following sentence, as it appears particularly confusing and provide a footnote that can be added to the end of the sentence as the footnote for that sentence:
+                                    Sentence: '{sentence}'.
+
+                                    1. Briefly explain the context
+                                    2. Explain the sentence '{sentence}'
+
+                                    Return a JSON with the followiong properties:
+                                    "contextExplanation": a text explanation for the context
+                                    "sentenceExplanation": the explanation for the sentence
                                  """)
+        }, new ChatCompletionOptions
+        {
+            ResponseFormat = chatResponseFormat
         }, cancellationToken: cancellationToken);
 
         logger.LogDebug("Sending explanation secondary request");
 
-        var secondRequest = await chatClient.CompleteChatAsync(new ChatMessage[]
+        try
         {
-            new SystemChatMessage("You are a text assistant."),
-            new AssistantChatMessage(initialRequest.Value.Content[0].Text),
-            new UserChatMessage($"Based on the explanation above, please create a brief footnote for the following sentence: '{sentence}'. Use plain, non-technical language that a general reader can easily understand. Avoid repeating the original phrasing and keep it very concise.\n\nFootnote:\n")
-        }, cancellationToken: cancellationToken);
-
-        var explanation = secondRequest.Value.Content[0].Text.Trim().Trim(StringComparison.OrdinalIgnoreCase, "Footnote:", "**Footnote**", "*Footnote*", ":", "**Footnote:**", "*Footnote:*").Trim();
-
-        return new ExplanationResponse
+            return JsonSerializer.Deserialize<ExplanationResponse>(response.Value.Content[0].Text, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            })!;
+        }
+        catch (Exception e)
         {
-            Explanation = explanation
-        };
+            logger.LogWarning(e, "Failed to deserialize response to confusion response. Defaulting to empty response. {@Response}", response);
+            throw;
+        }
     }
 
     public async Task<ConfusionResponse> EvaluateConfusionAsync(Chunk chunk, CancellationToken cancellationToken)
