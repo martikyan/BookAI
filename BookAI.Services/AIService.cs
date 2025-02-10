@@ -17,14 +17,14 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
         {
             new SystemChatMessage("You are a text assistant."),
             new UserChatMessage($"""
-                                 I'm going to send you text, please briefly explain what it is about so I can easily understand:
-                                 ```
-                                 {chunk.Context}
-
-                                 {chunk.Text}
-                                 ```
+                                    I'm going to send you a piece of text. Please explain what it is about in clear, everyday language. Avoid using the same technical terms or phrases found in the original text—rephrase ideas into simple, accessible words that any reader can understand.
+                                    ```
+                                    {chunk.Context}
                                  
-                                 Specifically the sentence '{sentence}' seems a little confusing.
+                                    {chunk.Text}
+                                    ```
+                                 
+                                    Also, please clarify the meaning of the following sentence, as it appears particularly confusing: '{sentence}'.
                                  """)
         }, cancellationToken: cancellationToken);
 
@@ -34,7 +34,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
         {
             new SystemChatMessage("You are a text assistant."),
             new AssistantChatMessage(initialRequest.Value.Content[0].Text),
-            new UserChatMessage($"Based on the above explanation, please provide a simple footnote explanation for the following sentence: '{sentence}'\nYour output will be placed as a footnote.\nFootnote:")
+            new UserChatMessage($"Based on the explanation above, please create a brief footnote for the following sentence: '{sentence}'. Use plain, non-technical language that a general reader can easily understand. Avoid repeating the original phrasing and keep it very concise.\n\nFootnote:\n")
         }, cancellationToken: cancellationToken);
 
         var explanation = secondRequest.Value.Content[0].Text.Trim().Trim(StringComparison.OrdinalIgnoreCase, "Footnote:", "**Footnote**", "*Footnote*", ":", "**Footnote:**", "*Footnote:*").Trim();
@@ -78,24 +78,24 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
         {
             new SystemChatMessage("You are a text assistant."),
             new UserChatMessage($"""
-                                 I'm going to send you text chunk. Please briefly explain what it is about and then highlight confusing sentences and provide confusion scores for some of the confusing ones, which are hard to follow or understand.
+                                 I'm going to send you a text chunk. Please perform the following steps:
 
-                                 Previously appeared text for you to understand the text:
-                                 ```
+                                 1. Summarize what the text is about in simple, clear language.
+                                 2. Identify any sentences or segments that might be confusing or complex.
+                                 3. For each confusing sentence or segment, assign a confusion score from 0 to 10 (0 means very clear; 10 means extremely confusing). When rating, focus on factors such as ambiguous phrasing, complex sentence structure, and difficult vocabulary. While sentence length may influence clarity, treat it only as a secondary factor in your scoring.
+
+                                 For context, here is some previously provided text:```
                                  {chunk.Context}
                                  ```
 
-                                 Current text chunk:
+                                 And here is the current text chunk:
                                  ```
                                  {chunk.Text}
                                  ```
 
-                                 For each sentence or text part in current text chunk, if the confusion is 10 then it is very hard to grasp.
-                                 For each sentence or text part in current text chunk, if the confusion is 0 then is easy to read and understand.
-
-                                 Please return your result as a JSON object with "textConfusionScores" array that has objects with the following keys:
-                                 - "text": (the part from the text chunk that is confusing, can be a sentence or text part, but shall be precisely as it is in the text chunk)
-                                 - "confusionScore": (a number from 0 to 10)
+                                 Please return your results as a JSON object with a "textConfusionScores" array. Each entry in the array should be an object with:
+                                 - "text": (the exact sentence or segment identified as confusing)
+                                 - "confusionScore": (an integer from 0 to 10)
                                  """)
         }, new ChatCompletionOptions
         {
