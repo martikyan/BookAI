@@ -13,7 +13,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
 
-        var node = htmlDocument.DocumentNode.SelectNodes($"//*[contains(., '{sentence.Trim('\'')}')]")?.LastOrDefault();
+        var node = htmlDocument.DocumentNode.SelectNodes($"//*[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), translate('{sentence.Trim('\'')}', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))]")?.LastOrDefault();
         if (node == null)
         {
             logger.LogWarning("Could not find sentence {Sentence} in the HTML {HTML}", sentence, html);

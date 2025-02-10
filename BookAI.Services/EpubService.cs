@@ -9,9 +9,7 @@ namespace BookAI.Services;
 
 public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSequence endnoteSequence, ILogger<EpubService> logger)
 {
-    public const string EndnotesBookFileName = "endnotes.htm";
-    public readonly string RelativePath = $"OEBPS/{EndnotesBookFileName}";
-    public readonly string AbsolutePath = $"/OEBPS/{EndnotesBookFileName}";
+    public const string EndnotesBookFileName = "endnotes.html";
     private readonly Lock _lock = new();
     private readonly int _maxTotalLength = 4000;
 
@@ -29,14 +27,12 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         await Parallel.ForEachAsync(chunks, async (chunk, _) =>
         {
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
-
+if (processedChunks >= 10)
+{
+    return;
+}
             try
             {
-                if (processedChunks >= 10)
-                {
-                    return;
-                }
-
                 await ProcessTextChunk(book, chunk, cancellationToken);
                 Interlocked.Increment(ref processedChunks);
             }
@@ -59,7 +55,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         foreach (var res in evalResult.TextConfusionScores)
         {
-            if (res.ConfusionScore > 7) // todo: make 5 configurable
+            if (res.ConfusionScore > 6) // todo: make 5 configurable
             {
                 var explanation = await aiService.ExplainAsync(res.Text, chunk, cancellationToken);
 
@@ -91,9 +87,9 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
             FileName = EndnotesBookFileName,
             ContentType = EpubContentType.Xhtml11,
             TextContent = HtmlService.GetEmptyEndnotesContent(),
-            Href = RelativePath,
-            AbsolutePath = AbsolutePath,
-            FullFilePath = RelativePath
+            Href = GetRelativePath(epubBook, EndnotesBookFileName),
+            AbsolutePath = GetFilePath(epubBook, EndnotesBookFileName),
+            FullFilePath = GetRelativePath(epubBook, EndnotesBookFileName)
         };
 
         epubBook.Resources.Html.Add(newFile);
@@ -101,8 +97,8 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         {
             Title = "Endnotes",
             Previous = epubBook.TableOfContents.Last(),
-            AbsolutePath = AbsolutePath,
-            RelativePath = RelativePath
+            AbsolutePath = GetFilePath(epubBook, EndnotesBookFileName),
+            RelativePath = GetRelativePath(epubBook, EndnotesBookFileName)
         });
         epubBook.TableOfContents.SkipLast(1).Last().Next = epubBook.TableOfContents.Last();
 
@@ -113,12 +109,12 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         SetInternalProperty(spineRef, "IdRef", EndnotesBookFileName);
         SetInternalProperty(spineRef, "Linear", true);
         SetInternalProperty(manifestItem, "Id", EndnotesBookFileName);
-        SetInternalProperty(manifestItem, "Href", RelativePath);
+        SetInternalProperty(manifestItem, "Href", GetRelativePath(epubBook, EndnotesBookFileName));
         SetInternalProperty(manifestItem, "MediaType", "application/xhtml+xml");
 
         navPoint.NavLabelText = "Endnotes";
         navPoint.Class = "chapter";
-        navPoint.ContentSrc = RelativePath;
+        navPoint.ContentSrc = GetRelativePath(epubBook, EndnotesBookFileName);
         navPoint.Id = EndnotesBookFileName;
         navPoint.PlayOrder = epubBook.Format.Ncx.NavMap.NavPoints.Select(p => p.PlayOrder).Max() + 1;
 
@@ -138,12 +134,12 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         }
     }
 
-    public EpubBook GetBook(Stream inputStream)
+    private EpubBook GetBook(Stream inputStream)
     {
         return EpubReader.Read(inputStream, false);
     }
 
-    public IList<Chunk> GetTextChunks(EpubBook book)
+    private IList<Chunk> GetTextChunks(EpubBook book)
     {
         var result = new List<Chunk>();
         // The rotating queue holds previous paragraphs (as plain text) that form the context.
@@ -257,5 +253,25 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         {
             contextQueue.Dequeue();
         }
+    }
+
+    private string GetRelativePath(EpubBook book, string filename)
+    {
+        return Path.GetRelativePath("/", GetFilePath(book, filename));
+    }
+
+    private string GetFilePath(EpubBook book, string filename)
+    {
+        return Path.Combine(GetFilesPath(book), filename);
+    }
+
+    private string GetFilesPath(EpubBook book)
+    {
+        if (!book.TableOfContents.Any())
+        {
+            throw new InvalidOperationException("Table of contentx is required to get files path");
+        }
+
+        return Path.GetDirectoryName(book.TableOfContents[book.TableOfContents.Count / 2].AbsolutePath)!;
     }
 }
