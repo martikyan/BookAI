@@ -34,20 +34,12 @@ public class HtmlService(ILogger<HtmlService> logger)
         {
             node = htmlDocument.DocumentNode;
         }
-        
-        var nodeNeedsSplitting = sentence.Length < node.InnerText.Length / 2;
+
         var nodeToInsert = HtmlNode.CreateNode($"<a id=\"{sequence}\" href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>");
 
-        if (nodeNeedsSplitting)
-        {
-            var matchinBlocks = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence);
-            var beginning = matchinBlocks.First().SourcePos;
-            node.InnerHtml = $"{node.InnerHtml[..(beginning + sentence.Length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + sentence.Length)..]}";
-        }
-        else
-        {
-            node.ChildNodes.Add(nodeToInsert);
-        }
+        var matchinBlocks = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence);
+        var beginning = matchinBlocks.First().SourcePos;
+        node.InnerHtml = $"{node.InnerHtml[..(beginning + sentence.Length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + sentence.Length)..]}";
 
         return htmlDocument.DocumentNode.OuterHtml;
     }
@@ -84,7 +76,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(endnotesChapterTextContent);
         htmlDocument.OptionWriteEmptyNodes = true;
-        
+
         var endnotes = htmlDocument.GetElementbyId("endnotes");
         endnotes.ChildNodes.Add(HtmlNode.CreateNode($"<p id=\"{sequence}\"><a href=\"{referenceFileName}#{sequence}\">[{sequence}]</a> {endnote}</p>"));
         return htmlDocument.DocumentNode.OuterHtml;
