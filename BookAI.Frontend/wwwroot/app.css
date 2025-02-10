@@ -1,4 +1,4 @@
-/* Global styles */
+/* General Styles */
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background-color: #121212;
@@ -17,107 +17,66 @@ a:hover, .btn-link:hover {
     color: #ffa726;
 }
 
-/* Buttons */
-.btn-primary {
-    color: #121212;
-    background: linear-gradient(135deg, #ff9800, #ff5722);
-    border: none;
-    padding: 12px 20px;
-    border-radius: 30px;
-    font-weight: bold;
-    transition: all 0.3s ease-in-out;
+/* Improved Layout */
+.main-content {
+    max-width: 900px;
+    margin: auto;
+    padding: 2rem;
+    text-align: center;
 }
 
-.btn-primary:hover {
+.app-header h1 {
+    font-size: 2rem;
+    color: #ff9800;
+    text-transform: uppercase;
+}
+
+.app-header p {
+    font-size: 1rem;
+    color: #bbbbbb;
+}
+
+/* Stylish File Upload */
+.custom-file-upload {
+    display: inline-block;
+    padding: 12px 25px;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: #121212;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
+}
+
+.custom-file-upload:hover {
     background: linear-gradient(135deg, #ff5722, #ff9800);
     transform: scale(1.05);
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-    box-shadow: 0 0 10px rgba(255, 152, 0, 0.8);
+.upload-icon {
+    font-size: 1.5rem;
+    margin-right: 8px;
 }
 
-/* Layout adjustments */
-.content {
-    padding: 2rem;
-    max-width: 900px;
-    margin: auto;
-    background: #1e1e1e;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
-}
-
-h1 {
-    font-size: 2rem;
-    text-align: center;
-    text-transform: uppercase;
-    color: #ff9800;
-}
-
-h1:focus {
-    outline: none;
-}
-
-/* Form elements */
-.form-control {
+/* Improved Sidebar */
+.sidebar {
+    width: 250px;
     background-color: #1e1e1e;
-    color: #e0e0e0;
-    border: 1px solid #ff9800;
-    padding: 10px;
-    border-radius: 5px;
-    transition: border 0.3s ease-in-out;
-}
-
-.form-control:focus {
-    border-color: #ff5722;
-    box-shadow: 0 0 10px rgba(255, 87, 34, 0.5);
-}
-
-.form-check-input {
-    background-color: #1e1e1e;
-    border: 2px solid #ff9800;
-}
-
-/* Validation */
-.valid.modified:not([type=checkbox]) {
-    outline: 2px solid #26b050;
-}
-
-.invalid {
-    outline: 2px solid #e50000;
-}
-
-.validation-message {
-    color: #e50000;
-    font-size: 0.9rem;
-}
-
-/* Error boundary */
-.blazor-error-boundary {
-    background: #b32121;
     padding: 1rem;
-    color: white;
-    border-radius: 5px;
-    text-align: center;
+    position: fixed;
+    height: 100vh;
 }
 
-.blazor-error-boundary::after {
-    content: "Something went wrong. Please try again.";
-    font-weight: bold;
-}
-
-/* Custom Checkbox */
-.darker-border-checkbox.form-check-input {
-    border-color: #ff9800;
-}
-
-/* Floating form placeholder styling */
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+.nav-link {
     color: #ff9800;
-    text-align: center;
+    padding: 10px;
+    display: block;
+    border-radius: 5px;
+    transition: background 0.3s;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-    text-align: left;
-    color: #ffa726;
+.nav-link:hover {
+    background: rgba(255, 152, 0, 0.1);
 }

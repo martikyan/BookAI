@@ -15,7 +15,14 @@
         <InputFile class="form-control"
                    accept=".epub"
                    OnChange="HandleFileSelected"
-                   @ref="fileInput"/>
+                   @ref="fileInput">
+            <section class="upload-section">
+                <label class="custom-file-upload">
+                    <input type="file" id="fileInput" hidden>
+                    <span class="upload-icon">📂</span> Upload Your Ebook
+                </label>
+            </section>
+        </InputFile>
         <ValidationMessage For="@(() => selectedFile)"/>
         <div class="form-text">Maximum file size: 100MB</div>
     </div>
