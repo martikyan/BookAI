@@ -20,6 +20,7 @@ public static class DependencyInjectionExtensions
         services.AddScoped<EpubService>();
         services.AddScoped<AIService>();
         services.AddScoped<EndnoteSequence>();
+        services.AddSingleton<CalibreService>();
 
         services.AddSingleton(sp =>
         {

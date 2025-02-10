@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using BookAI.Services.Models;
@@ -7,13 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace BookAI.Services;
 
-public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSequence endnoteSequence, ILogger<EpubService> logger)
+public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSequence endnoteSequence, CalibreService calibreService, ILogger<EpubService> logger)
 {
     public const string EndnotesBookFileName = "endnotes.html";
     private readonly Lock _lock = new();
     private readonly int _maxTotalLength = 4000;
 
-    public async Task<EpubBook> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken)
+    public async Task<Stream> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken)
     {
         logger.LogDebug("Processing EPUB book");
 
@@ -27,14 +28,15 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         await Parallel.ForEachAsync(chunks, async (chunk, _) =>
         {
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
-if (processedChunks >= 2)
-{
-    return;
-}
+            if (processedChunks >= 6)
+            {
+                return;
+            }
+
             try
             {
-                await ProcessTextChunk(book, chunk, cancellationToken);
                 Interlocked.Increment(ref processedChunks);
+                await ProcessTextChunk(book, chunk, cancellationToken);
             }
             catch (Exception e)
             {
@@ -44,7 +46,11 @@ if (processedChunks >= 2)
 
         logger.LogInformation("Finished processing EPUB book");
 
-        return book;
+        using var ms = new MemoryStream();
+        new EpubWriter(book).Write(ms);
+        ms.Position = 0;
+
+        return await calibreService.ConvertOrFixEpubAsync(ms);
     }
 
     private async Task ProcessTextChunk(EpubBook book, Chunk chunk, CancellationToken cancellationToken)
