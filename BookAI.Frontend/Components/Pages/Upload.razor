@@ -12,17 +12,15 @@
           OnValidSubmit="HandleValidSubmit"
           FormName="UploadForm">
     <div class="mb-3">
-        <InputFile class="form-control"
-                   accept=".epub"
-                   OnChange="HandleFileSelected"
-                   @ref="fileInput">
-            <section class="upload-section">
-                <label class="custom-file-upload">
-                    <input type="file" id="fileInput" hidden>
-                    <span class="upload-icon">📂</span> Upload Your Ebook
-                </label>
-            </section>
-        </InputFile>
+        <section class="upload-section">
+            <label class="custom-file-upload" for="fileInput">
+                <span class="upload-icon">📂</span> Upload Your Ebook
+            </label>
+            <InputFile id="fileInput" class="hidden-file-input"
+                       accept=".epub"
+                       OnChange="HandleFileSelected"
+                       @ref="fileInput"/>
+        </section>
         <ValidationMessage For="@(() => selectedFile)"/>
         <div class="form-text">Maximum file size: 100MB</div>
     </div>
@@ -31,6 +29,7 @@
         @(isProcessing ? "Processing..." : "Upload and Process")
     </button>
 </EditForm>
+
 
 @if (isProcessing)
 {

@@ -1,4 +1,4 @@
-/* General Styles */
+/* Global styles */
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background-color: #121212;
@@ -17,14 +17,139 @@ a:hover, .btn-link:hover {
     color: #ffa726;
 }
 
-/* Improved Layout */
+/* Buttons */
+.btn-primary {
+    color: #121212;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-weight: bold;
+    transition: all 0.3s ease-in-out;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #ff5722, #ff9800);
+    transform: scale(1.05);
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.8);
+}
+
+/* Layout adjustments */
+.content {
+    padding: 2rem;
+    max-width: 900px;
+    margin: auto;
+    background: #1e1e1e;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
+}
+
+h1 {
+    font-size: 2rem;
+    text-align: center;
+    text-transform: uppercase;
+    color: #ff9800;
+}
+
+h1:focus {
+    outline: none;
+}
+
+/* Form elements */
+.form-control {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    border: 1px solid #ff9800;
+    padding: 10px;
+    border-radius: 5px;
+    transition: border 0.3s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #ff5722;
+    box-shadow: 0 0 10px rgba(255, 87, 34, 0.5);
+}
+
+.form-check-input {
+    background-color: #1e1e1e;
+    border: 2px solid #ff9800;
+}
+
+/* Validation */
+.valid.modified:not([type=checkbox]) {
+    outline: 2px solid #26b050;
+}
+
+.invalid {
+    outline: 2px solid #e50000;
+}
+
+.validation-message {
+    color: #e50000;
+    font-size: 0.9rem;
+}
+
+/* Error boundary */
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.blazor-error-boundary::after {
+    content: "Something went wrong. Please try again.";
+    font-weight: bold;
+}
+
+/* Custom Checkbox */
+.darker-border-checkbox.form-check-input {
+    border-color: #ff9800;
+}
+
+/* Floating form placeholder styling */
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+    color: #ff9800;
+    text-align: center;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+    text-align: left;
+    color: #ffa726;
+}
+
+
+/* 1. Ensure brighter text and remove unwanted scroll */
+html, body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #121212;
+    color: #ffffff;               /* Changed to pure white for maximum contrast */
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;           /* Prevent horizontal scrolling */
+}
+
+/* Container for the entire page */
+.page {
+    min-height: 100vh;            /* Full viewport height */
+    display: flex;
+}
+
+/* 2. Adjust main content to account for fixed sidebar */
 .main-content {
     max-width: 900px;
     margin: auto;
     padding: 2rem;
     text-align: center;
+    margin-left: 250px;           /* Offset for sidebar width */
+    width: calc(100% - 250px);
 }
 
+/* App header styling with modern accents */
 .app-header h1 {
     font-size: 2rem;
     color: #ff9800;
@@ -33,26 +158,37 @@ a:hover, .btn-link:hover {
 
 .app-header p {
     font-size: 1rem;
-    color: #bbbbbb;
+    color: #dddddd;               /* A light gray for secondary text */
 }
 
-/* Stylish File Upload */
+/* 3. Stylish File Upload with animated gradient on hover */
 .custom-file-upload {
     display: inline-block;
     padding: 12px 25px;
     background: linear-gradient(135deg, #ff9800, #ff5722);
+    background-size: 200% 200%;    /* For smoother animation */
     color: #121212;
     font-weight: bold;
     border-radius: 30px;
     cursor: pointer;
-    transition: all 0.3s ease-in-out;
+    transition: transform 0.3s ease-in-out; /* Only transform is transitioned here */
     text-align: center;
     box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
 }
 
 .custom-file-upload:hover {
-    background: linear-gradient(135deg, #ff5722, #ff9800);
+    /* 4. Animate the gradient effect */
+    animation: gradientShift 3s ease infinite;
     transform: scale(1.05);
+}
+
+@keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    20%  { background-position: 50% 50%; }
+    40%  { background-position: 100% 50%; }
+    60%  { background-position: 50% 50%; }
+    80%  { background-position: 25% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .upload-icon {
@@ -60,7 +196,7 @@ a:hover, .btn-link:hover {
     margin-right: 8px;
 }
 
-/* Improved Sidebar */
+/* Sidebar remains fixed and modern */
 .sidebar {
     width: 250px;
     background-color: #1e1e1e;
@@ -79,4 +215,75 @@ a:hover, .btn-link:hover {
 
 .nav-link:hover {
     background: rgba(255, 152, 0, 0.1);
+}
+
+/* Additional link styles */
+a, .btn-link {
+    color: #ff9800;
+    text-decoration: none;
+    transition: color 0.3s ease-in-out;
+}
+
+a:hover, .btn-link:hover {
+    color: #ffa726;
+}
+
+/* Container for the upload section */
+.upload-section {
+    margin: 1rem 0;
+    text-align: center;
+}
+
+/* Hide the default file input element */
+input[type="file"] {
+    display: none;
+}
+
+/* Custom file upload button styling */
+.custom-file-upload {
+    display: inline-block;
+    padding: 12px 25px;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    background-size: 200% 200%;
+    color: #121212;
+    font-weight: bold;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(255, 152, 0, 0.2);
+}
+
+/* Hover effect: animated gradient and subtle scaling */
+.custom-file-upload:hover {
+    animation: gradientShift 3s ease infinite;
+    transform: scale(1.05);
+}
+
+/* Keyframes for the animated gradient effect */
+@keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    20%  { background-position: 50% 50%; }
+    40%  { background-position: 100% 50%; }
+    60%  { background-position: 50% 50%; }
+    80%  { background-position: 25% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Styling for the file upload icon */
+.upload-icon {
+    font-size: 1.5rem;
+    margin-right: 8px;
+}
+
+/* Form helper text styling (e.g., maximum file size info) */
+.form-text {
+    font-size: 0.875rem;
+    color: #bbbbbb;
+    margin-top: 0.5rem;
+}
+
+/* Spacing for form groups */
+.mb-3 {
+    margin-bottom: 1rem;
 }
