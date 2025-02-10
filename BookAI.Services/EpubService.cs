@@ -14,7 +14,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     private readonly Lock _lock = new();
     private readonly int _maxTotalLength = 4000;
 
-    public async Task<Stream> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken)
+    public async Task<Stream> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken = default) // todo: force to pass cancellation token
     {
         logger.LogDebug("Processing EPUB book");
 
@@ -27,6 +27,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         await Parallel.ForEachAsync(chunks, async (chunk, _) =>
         {
+            return;
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
             if (processedChunks >= 6)
             {
