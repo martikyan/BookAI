@@ -13,14 +13,35 @@ public class HtmlService(ILogger<HtmlService> logger)
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
 
-        var node = htmlDocument.DocumentNode.SelectNodes($"//*[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), translate('{sentence.Trim('\'')}', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))]")?.LastOrDefault();
-        if (node == null)
+        HtmlNode? node = null;
+        try
         {
-            logger.LogWarning("Could not find sentence {Sentence} in the HTML {HTML}", sentence, html);
-            throw new InvalidOperationException("Failed to find the referenced sentence");
+            node = htmlDocument.DocumentNode.SelectNodes($"//*[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), translate('{sentence}', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'))]")?.LastOrDefault();
+        }
+        catch (Exception ex)
+        {
+            logger.LogInformation(ex, "Failed to find node using XPath");
         }
 
-        node.ChildNodes.Add(HtmlNode.CreateNode($"<a href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>"));
+        if (node == null)
+        {
+            node = htmlDocument.DocumentNode;
+        }
+
+        var nodeNeedsSplitting = sentence.Length < node.InnerText.Length / 3;
+        var nodeToInsert = HtmlNode.CreateNode($"<a href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>");
+
+        if (nodeNeedsSplitting)
+        {
+            var matchinBlocks = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence);
+            var beginning = matchinBlocks.First().SourcePos;
+            node.InnerHtml = $"{node.InnerHtml[..(beginning+sentence.Length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning+sentence.Length)..]}";
+        }
+        else
+        {
+            node.ChildNodes.Add(nodeToInsert);
+        }
+
         return htmlDocument.DocumentNode.OuterHtml;
     }
 
