@@ -6,12 +6,19 @@ namespace BookAI.Services;
 
 public class HtmlService(ILogger<HtmlService> logger)
 {
+    static HtmlService()
+    {
+        HtmlNode.ElementsFlags["br"] = HtmlElementFlag.Empty;
+        HtmlNode.ElementsFlags["link"] = HtmlElementFlag.Closed;
+    }
+
     public string AddReference(string html, string sentence, string sequence)
     {
         logger.LogDebug("Adding explanation to the HTML");
 
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
+        htmlDocument.OptionWriteEmptyNodes = true;
 
         HtmlNode? node = null;
         try
@@ -27,7 +34,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         {
             node = htmlDocument.DocumentNode;
         }
-
+        
         var nodeNeedsSplitting = sentence.Length < node.InnerText.Length / 3;
         var nodeToInsert = HtmlNode.CreateNode($"<a href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>");
 
@@ -49,6 +56,7 @@ public class HtmlService(ILogger<HtmlService> logger)
     {
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
+        htmlDocument.OptionWriteEmptyNodes = true;
 
         // todo: fix the case when paragraphs are not html paragraph tags
         var paragraphNodes = htmlDocument.DocumentNode.SelectNodes("//p");
@@ -75,7 +83,8 @@ public class HtmlService(ILogger<HtmlService> logger)
 
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(endnotesChapterTextContent);
-
+        htmlDocument.OptionWriteEmptyNodes = true;
+        
         var endnotes = htmlDocument.GetElementbyId("endnotes");
         endnotes.ChildNodes.Add(HtmlNode.CreateNode($"<p id=\"{sequence}\">{sequence}: {endnote}</p>")); // todo: make sequence to reference back the original sentence
         return htmlDocument.DocumentNode.OuterHtml;
@@ -85,7 +94,7 @@ public class HtmlService(ILogger<HtmlService> logger)
     {
         return """
                <!DOCTYPE html>
-               <html>
+               <html xmlns="http://www.w3.org/1999/xhtml">
                <head>
                    <meta charset="UTF-8">
                    <title>Generated Endnotes</title>

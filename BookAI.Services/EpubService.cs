@@ -27,7 +27,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         await Parallel.ForEachAsync(chunks, async (chunk, _) =>
         {
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
-if (processedChunks >= 10)
+if (processedChunks >= 2)
 {
     return;
 }
