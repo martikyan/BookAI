@@ -1,0 +1,122 @@
+@page "/"
+@using BookAI.Services
+@inject EpubService EpubService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Upload Book</PageTitle>
+
+<h1>Upload EPUB Book</h1>
+
+<EditForm EditContext="@editContext"
+          OnValidSubmit="HandleValidSubmit"
+          FormName="UploadForm">
+    <div class="mb-3">
+        <InputFile class="form-control"
+                   accept=".epub"
+                   OnChange="HandleFileSelected"
+                   @ref="fileInput"/>
+        <ValidationMessage For="@(() => selectedFile)"/>
+        <div class="form-text">Maximum file size: 100MB</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+        @(isProcessing ? "Processing..." : "Upload and Process")
+    </button>
+</EditForm>
+
+@if (isProcessing)
+{
+    <div class="alert alert-info mt-3">
+        Processing your file, please wait...
+    </div>
+}
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger mt-3">
+        @errorMessage
+    </div>
+}
+
+@if (downloadUrl != null)
+{
+    <a class="btn btn-success mt-3" href="@downloadUrl" download="@downloadFileName">
+        Download Processed File
+    </a>
+}
+
+@code {
+    private InputFile? fileInput;
+    private IBrowserFile? selectedFile;
+    private bool isProcessing;
+    private string? errorMessage;
+    private EditContext editContext = new EditContext(new object());
+
+    // New properties for file download:
+    private byte[]? processedFile;
+    private string? downloadUrl;
+    private string downloadFileName = "ProcessedBook.epub";
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            selectedFile = e.File;
+            errorMessage = null;
+            editContext.NotifyFieldChanged(FieldIdentifier.Create(() => selectedFile));
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error selecting file: {ex.Message}";
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (selectedFile == null || selectedFile.Size == 0)
+        {
+            errorMessage = "Please select a valid EPUB file";
+            return;
+        }
+
+        isProcessing = true;
+        errorMessage = null;
+        downloadUrl = null; // clear any previous download link
+
+        try
+        {
+            // Open the selected file as a stream.
+            using var stream = selectedFile.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
+            using var intermediaryStream = new MemoryStream();
+            await stream.CopyToAsync(intermediaryStream);
+            intermediaryStream.Position = 0;
+
+            // Process the book. ProcessBookAsync returns a stream.
+            using var processedStream = await EpubService.ProcessBookAsync(intermediaryStream).ConfigureAwait(false);
+
+            // Read the processed stream into a byte array.
+            using var ms = new MemoryStream();
+            await processedStream.CopyToAsync(ms);
+            processedFile = ms.ToArray();
+
+            // Generate a data URL (Base64-encoded) for download.
+            // (This approach works for small to moderate file sizes.)
+            var base64Data = Convert.ToBase64String(processedFile);
+            downloadUrl = $"data:application/octet-stream;base64,{base64Data}";
+
+            // Instead of redirecting immediately, show the download button.
+            // Optionally, you could also set a success message here.
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error processing file: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+}
