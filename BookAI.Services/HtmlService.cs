@@ -35,7 +35,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         {
             var matchinBlocks = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence);
             var beginning = matchinBlocks.First().SourcePos;
-            node.InnerHtml = $"{node.InnerHtml[..(beginning+sentence.Length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning+sentence.Length)..]}";
+            node.InnerHtml = $"{node.InnerHtml[..(beginning + sentence.Length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + sentence.Length)..]}";
         }
         else
         {
@@ -87,10 +87,13 @@ public class HtmlService(ILogger<HtmlService> logger)
                <!DOCTYPE html>
                <html>
                <head>
-               <h1>Generated endnotes.</h1>
+                   <meta charset="UTF-8">
+                   <title>Generated Endnotes</title>
                </head>
                <body id="endnotes">
+                   <h1>Generated Endnotes</h1>
                </body>
+               </html>
                """;
     }
 }
