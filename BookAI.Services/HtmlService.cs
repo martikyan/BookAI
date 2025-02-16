@@ -1,10 +1,11 @@
+using BookAI.Services.Abstraction;
 using BookAI.Services.Models;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 
 namespace BookAI.Services;
 
-public class HtmlService(ILogger<HtmlService> logger)
+public class HtmlService(ILogger<HtmlService> logger) : IHtmlService
 {
     static HtmlService()
     {

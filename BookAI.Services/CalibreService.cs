@@ -1,9 +1,10 @@
 using System.Diagnostics;
+using BookAI.Services.Abstraction;
 using Microsoft.Extensions.Logging;
 
 namespace BookAI.Services;
 
-public class CalibreService(ILogger<CalibreService> logger)
+public class CalibreService(ILogger<CalibreService> logger) : ICalibreService
 {
     public async Task<Stream> ConvertOrFixEpubAsync(Stream inputStream)
     {

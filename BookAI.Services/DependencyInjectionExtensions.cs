@@ -1,4 +1,5 @@
 using System.ClientModel;
+using BookAI.Services.Abstraction;
 using BookAI.Services.Models;
 using BookAI.Services.Options;
 using Microsoft.Extensions.Configuration;
@@ -16,11 +17,11 @@ public static class DependencyInjectionExtensions
         services.AddOptions<OpenAIOptions>()
             .BindConfiguration("OpenAI");
 
-        services.AddSingleton<HtmlService>();
+        services.AddSingleton<IHtmlService, HtmlService>();
         services.AddScoped<EpubService>();
-        services.AddScoped<AIService>();
-        services.AddScoped<EndnoteSequence>();
-        services.AddSingleton<CalibreService>();
+        services.AddScoped<IAIService, AIService>();
+        services.AddScoped<EndnoteSequenceProvider>();
+        services.AddSingleton<ICalibreService, CalibreService>();
 
         services.AddSingleton(sp =>
         {

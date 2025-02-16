@@ -1,9 +1,8 @@
 using System.Text;
-using Microsoft.Extensions.Logging;
 
 namespace BookAI.Services;
 
-public class EndnoteSequence(ILogger<EndnoteSequence> logger)
+public class EndnoteSequenceProvider
 {
     private readonly char[] _symbols = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
     private int _iterator = 0;
@@ -21,7 +20,6 @@ public class EndnoteSequence(ILogger<EndnoteSequence> logger)
         }
 
         var result = sb.ToString();
-        logger.LogDebug("Generated endnote refrerence sequence {Sequence}", result);
 
         return result;
     }

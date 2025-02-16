@@ -1,4 +1,5 @@
 using System.Reflection;
+using BookAI.Services.Abstraction;
 using BookAI.Services.Models;
 using EpubCore;
 using EpubCore.Format;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace BookAI.Services;
 
-public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSequence endnoteSequence, CalibreService calibreService, ILogger<EpubService> logger)
+public class EpubService(IHtmlService htmlService, IAIService aiService, EndnoteSequenceProvider endnoteSequenceProvider, ICalibreService calibreService, ILogger<EpubService> logger)
 {
     public const string EndnotesBookFileName = "endnotes.html";
     private readonly Lock _lock = new();
@@ -61,7 +62,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
                 lock (_lock)
                 {
-                    var seq = endnoteSequence.GetNext();
+                    var seq = endnoteSequenceProvider.GetNext();
                     var endnotesChapter = GetEndnotesChapter(book);
 
                     var textContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Text, seq);
@@ -163,7 +164,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         return EpubReader.Read(convertedBook, false);
     }
 
-    private IList<Chunk> GetTextChunks(EpubBook book)
+    internal IList<Chunk> GetTextChunks(EpubBook book)
     {
         var result = new List<Chunk>();
         // The rotating queue holds previous paragraphs (as plain text) that form the context.

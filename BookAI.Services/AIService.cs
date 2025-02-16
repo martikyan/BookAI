@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BookAI.Services.Abstraction;
 using BookAI.Services.Models;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
@@ -7,7 +8,7 @@ using ChatResponseFormat = OpenAI.Chat.ChatResponseFormat;
 
 namespace BookAI.Services;
 
-public class AIService(ChatClient chatClient, ILogger<AIService> logger)
+public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAIService
 {
     public async Task<ExplanationResponse> ExplainAsync(string sentence, Chunk chunk, CancellationToken cancellationToken)
     {
