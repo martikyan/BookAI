@@ -10,7 +10,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 {
     public const string EndnotesBookFileName = "endnotes.html";
     private readonly Lock _lock = new();
-    private readonly int _maxTotalLength = 4000;
+    private readonly int _maxTotalLength = 10000;
 
     public async Task<Stream> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken = default) // todo: force to pass cancellation token
     {
@@ -20,17 +20,12 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         logger.LogInformation("Parsed book {Title}", book.Title);
 
-        var chunks = GetTextChunks(book).Skip(20).ToList();
+        var chunks = GetTextChunks(book);
         var processedChunks = 0;
 
         await Parallel.ForEachAsync(chunks, async (chunk, _) =>
         {
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
-
-            if (processedChunks >= 20)
-            {
-                return;
-            }
 
             try
             {
@@ -270,7 +265,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     private void AppendToContextQueue(Queue<string> contextQueue, string paragraphText)
     {
         contextQueue.Enqueue(paragraphText);
-        while (contextQueue.Any() && GetTotalLength(contextQueue) > 1000)
+        while (contextQueue.Any() && GetTotalLength(contextQueue) > 2000)
         {
             contextQueue.Dequeue();
         }
