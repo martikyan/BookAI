@@ -20,12 +20,17 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         logger.LogInformation("Parsed book {Title}", book.Title);
 
-        var chunks = GetTextChunks(book).ToList();
+        var chunks = GetTextChunks(book).Skip(20).ToList();
         var processedChunks = 0;
 
         await Parallel.ForEachAsync(chunks, async (chunk, _) =>
         {
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
+
+            if (processedChunks >= 20)
+            {
+                return;
+            }
 
             try
             {

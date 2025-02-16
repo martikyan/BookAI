@@ -36,7 +36,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
         {
             new SystemChatMessage("You are a text assistant."),
             new UserChatMessage($"""
-                                    I'm going to send you a piece of text. Please explain what it is about in clear, everyday language. Avoid using the same technical terms or phrases found in the original text—rephrase ideas into simple, accessible words that any reader can understand.
+                                    I'm going to send you a piece of text. Please explain what it is about in clear, everyday language. Avoid using the same technical terms or phrases found in the original text. Rephrase ideas into simple, accessible words that reader can understand.
                                     Context:
                                     ```
                                     {chunk.Context}
@@ -49,6 +49,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger)
 
                                     1. Briefly explain the context
                                     2. Explain the sentence '{sentence}'
+                                    3. Please avoid starting the explanation like 'This sentence means...' or 'That sentence is...' or something like that.
 
                                     Return a JSON with the followiong properties:
                                     "contextExplanation": a text explanation for the context

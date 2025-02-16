@@ -14,7 +14,7 @@ public class HtmlService(ILogger<HtmlService> logger)
 
     public string AddReference(string html, string sentence, string sequence)
     {
-        logger.LogDebug("Adding explanation to the HTML");
+        logger.LogInformation("Placing explanation of '{Sentence}' to HTML", sentence);
 
         var htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(html);
@@ -37,11 +37,68 @@ public class HtmlService(ILogger<HtmlService> logger)
 
         var nodeToInsert = HtmlNode.CreateNode($"<a id=\"{sequence}\" href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>");
 
-        var matchinBlocks = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence);
-        var beginning = matchinBlocks.First().SourcePos;
-        node.InnerHtml = $"{node.InnerHtml[..(beginning + sentence.Length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + sentence.Length)..]}";
+        sentence = Trim(sentence);
+        var matchingBlock = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence).MaxBy(b => b.Length);
+        
+        var beginning = matchingBlock.SourcePos;
+        var length = sentence.Length - matchingBlock.DestPos;
+        logger.LogInformation("Levenshtein suggested to place '{Sentence}' at position {Position} with length {Length}, count {Count} and destination position {DestinationPosition}", sentence, matchingBlock.SourcePos, matchingBlock.Length, matchingBlock.Length, matchingBlock.DestPos);
 
+        const int maxShift = 5;
+        var minHtml = $"{node.InnerHtml[..(beginning + length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + length)..]}";
+        var minErrors = GetHtmlErrorsCount(minHtml);
+        for (var i = -maxShift / 2; i < maxShift / 2; i++)
+        {
+            try
+            {
+                var currentHtml = $"{node.InnerHtml[..(beginning + length + i)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + length + i)..]}";
+                var currentErrors = GetHtmlErrorsCount(currentHtml);
+                if (currentErrors < minErrors)
+                {
+                    logger.LogInformation("Found HTML position with less errors {PrevMin} vs {Min}", minErrors, currentErrors);
+                    minHtml = currentHtml;
+                    minErrors = currentErrors;
+                } else if (currentErrors == minErrors && i <= 0) // prefer index closer to 0 if min errors are the same
+                {
+                    minHtml = currentHtml;
+                    minErrors = currentErrors;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Couldn't place the reference");
+            }
+        }
+
+        node.InnerHtml = minHtml;
+        logger.LogInformation("Placed sentence with resulting HTML {HTML}", minHtml);
         return htmlDocument.DocumentNode.OuterHtml;
+    }
+
+    private string Trim(string sentence)
+    {
+        sentence = sentence.Trim();
+        if (sentence.Length < 20)
+        {
+            return sentence;
+        }
+
+        const int maxWords = 4;
+        var currentSpaces = 0;
+        for (var i = 1; i < sentence.Length; i++)
+        {
+            if (char.IsWhiteSpace(sentence[sentence.Length - i]))
+            {
+                currentSpaces++;
+            }
+
+            if (currentSpaces >= maxWords)
+            {
+                return sentence.Substring(sentence.Length - i).Trim();
+            }
+        }
+
+        return sentence;
     }
 
     public IEnumerable<Paragraph> GetPlainText(string html)
@@ -96,5 +153,13 @@ public class HtmlService(ILogger<HtmlService> logger)
                </body>
                </html>
                """;
+    }
+
+    public static int GetHtmlErrorsCount(string html)
+    {
+        var htmlDocument = new HtmlDocument();
+        htmlDocument.LoadHtml(html);
+        var parseErrors = htmlDocument.ParseErrors;
+        return parseErrors.Count();
     }
 }
