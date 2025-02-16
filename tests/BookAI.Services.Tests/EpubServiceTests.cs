@@ -42,10 +42,10 @@ public class EpubServiceTests
         Assert.That(guids.Any());
         Assert.That(chunks.Count(c => string.IsNullOrEmpty(c.Context)) <= 1);
 
-        var guidIndex = 0;
-        foreach (var chunkText in chunks.SelectMany(c => c.Text.Split('\n')))
+        var chunkedGuids = chunks.SelectMany(c => c.Text.Split('\n')).ToList();
+        for (var i = 0; i < guids.Count; i++)
         {
-            Assert.That(chunkText == guids[guidIndex++]);
+            Assert.That(chunkedGuids[i] == guids[i]);
         }
     }
 }
