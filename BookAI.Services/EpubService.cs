@@ -27,10 +27,6 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         {
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
 
-            if (processedChunks >= 10)
-            {
-                return;
-            }
             try
             {
                 Interlocked.Increment(ref processedChunks);
