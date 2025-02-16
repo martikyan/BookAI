@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using System.Reflection;
-using System.Text;
 using BookAI.Services.Models;
 using EpubCore;
 using EpubCore.Format;
@@ -18,21 +16,16 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     {
         logger.LogDebug("Processing EPUB book");
 
-        var book = GetBook(epubStream);
+        var book = await GetBookAsync(epubStream);
 
         logger.LogInformation("Parsed book {Title}", book.Title);
 
-        var chunks = GetTextChunks(book);
+        var chunks = GetTextChunks(book).ToList();
         var processedChunks = 0;
 
         await Parallel.ForEachAsync(chunks, async (chunk, _) =>
         {
-            return;
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
-            if (processedChunks >= 6)
-            {
-                return;
-            }
 
             try
             {
@@ -62,7 +55,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
 
         foreach (var res in evalResult.TextConfusionScores)
         {
-            if (res.ConfusionScore > 6) // todo: make 5 configurable
+            if (res.ConfusionScore > 7) // todo: make configurable
             {
                 var explanation = await aiService.ExplainAsync(res.Text, chunk, cancellationToken);
 
@@ -141,9 +134,25 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         }
     }
 
-    private EpubBook GetBook(Stream inputStream)
+    private async Task<EpubBook> GetBookAsync(Stream inputStream)
     {
-        return EpubReader.Read(inputStream, false);
+        using var ms = new MemoryStream();
+        inputStream.CopyTo(ms);
+
+        try
+        {
+            return EpubReader.Read(ms, false);
+        }
+        catch (Exception e)
+        {
+            logger.LogInformation(e, "Failed to read EPUB book");
+        }
+        
+        ms.Position = 0;
+        logger.LogInformation("Converting the book to EPUB");
+
+        var convertedBook = await calibreService.ConvertOrFixEpubAsync(ms);
+        return EpubReader.Read(convertedBook, false);
     }
 
     private IList<Chunk> GetTextChunks(EpubBook book)
@@ -256,7 +265,7 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
     private void AppendToContextQueue(Queue<string> contextQueue, string paragraphText)
     {
         contextQueue.Enqueue(paragraphText);
-        while (GetTotalLength(contextQueue) > 1000 && contextQueue.Any())
+        while (contextQueue.Any() && GetTotalLength(contextQueue) > 1000)
         {
             contextQueue.Dequeue();
         }
