@@ -9,7 +9,7 @@ namespace BookAI.Services.Tests;
 public class EpubServiceTests
 {
     private EpubService _systemUnderTest;
-    private Mock<IHtmlService> _htmlServiceMock = new Mock<IHtmlService>();
+    private Mock<IHtmlService> _htmlServiceMock = new();
 
     private readonly string _epubPath = Path.Combine("Resources", "epub30-spec.epub");
 
