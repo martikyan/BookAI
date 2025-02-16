@@ -12,7 +12,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         HtmlNode.ElementsFlags["link"] = HtmlElementFlag.Closed;
     }
 
-    public string AddReference(string html, string sentence, string sequence)
+    public string? AddReference(string html, string sentence, string sequence)
     {
         logger.LogInformation("Placing explanation of '{Sentence}' to HTML", sentence);
 
@@ -37,21 +37,31 @@ public class HtmlService(ILogger<HtmlService> logger)
 
         var nodeToInsert = HtmlNode.CreateNode($"<a id=\"{sequence}\" href=\"{EpubService.EndnotesBookFileName}#{sequence}\" style=\"font-size: 0.8em; vertical-align: super;\"><span>[{sequence}</span><span style=\"font-size: 0.8em; vertical-align: super;\">AI]</span>");
 
-        sentence = Trim(sentence);
-        var matchingBlock = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence).MaxBy(b => b.Length);
+        for (var wordsToPreserve = 10; wordsToPreserve >= 1; wordsToPreserve--)
+        {
+            sentence = Trim(sentence, wordsToPreserve);
+            if (node.InnerHtml.Contains(sentence, StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+        }
 
-        var beginning = matchingBlock.SourcePos;
-        var length = sentence.Length - matchingBlock.DestPos;
-        logger.LogInformation("Levenshtein suggested to place '{Sentence}' at position {Position} with length {Length}, count {Count} and destination position {DestinationPosition}", sentence, matchingBlock.SourcePos, matchingBlock.Length, matchingBlock.Length, matchingBlock.DestPos);
+        if (!node.InnerHtml.Contains(sentence, StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogInformation("Couldn't find sentence {Sentence} in the HTML", sentence);
+            return null;
+        }
+        
+        var insertionIndex = node.InnerHtml.IndexOf(sentence, StringComparison.OrdinalIgnoreCase) + sentence.Length;
 
-        const int maxShift = 5;
-        var minHtml = $"{node.InnerHtml[..(beginning + length)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + length)..]}";
+        const int maxShift = 4;
+        var minHtml = $"{node.InnerHtml[..(insertionIndex)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(insertionIndex)..]}";
         var minErrors = GetHtmlErrorsCount(minHtml);
         for (var i = -maxShift / 2; i < maxShift / 2; i++)
         {
             try
             {
-                var currentHtml = $"{node.InnerHtml[..(beginning + length + i)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(beginning + length + i)..]}";
+                var currentHtml = $"{node.InnerHtml[..(insertionIndex + i)]}{nodeToInsert.OuterHtml}{node.InnerHtml[(insertionIndex + i)..]}";
                 var currentErrors = GetHtmlErrorsCount(currentHtml);
                 if (currentErrors < minErrors)
                 {
@@ -76,7 +86,7 @@ public class HtmlService(ILogger<HtmlService> logger)
         return htmlDocument.DocumentNode.OuterHtml;
     }
 
-    private string Trim(string sentence)
+    private string Trim(string sentence, int wordsToPreserve)
     {
         sentence = sentence.Trim();
         if (sentence.Length < 20)
@@ -84,7 +94,6 @@ public class HtmlService(ILogger<HtmlService> logger)
             return sentence;
         }
 
-        const int maxWords = 4;
         var currentSpaces = 0;
         for (var i = 1; i < sentence.Length; i++)
         {
@@ -93,7 +102,7 @@ public class HtmlService(ILogger<HtmlService> logger)
                 currentSpaces++;
             }
 
-            if (currentSpaces >= maxWords)
+            if (currentSpaces >= wordsToPreserve)
             {
                 return sentence.Substring(sentence.Length - i).Trim();
             }

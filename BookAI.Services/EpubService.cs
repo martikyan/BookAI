@@ -27,6 +27,10 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
         {
             logger.LogInformation("Progress: {Progress:F0}%", 100.0 * processedChunks / chunks.Count);
 
+            if (processedChunks >= 10)
+            {
+                return;
+            }
             try
             {
                 Interlocked.Increment(ref processedChunks);
@@ -64,7 +68,15 @@ public class EpubService(HtmlService htmlService, AIService aiService, EndnoteSe
                     var seq = endnoteSequence.GetNext();
                     var endnotesChapter = GetEndnotesChapter(book);
 
-                    chunk.EpubTextFile.TextContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Text, seq);
+                    var textContent = htmlService.AddReference(chunk.EpubTextFile.TextContent, res.Text, seq);
+
+                    if (string.IsNullOrEmpty(textContent))
+                    {
+                        logger.LogInformation("Skipped an endnote chapter");
+                        continue;
+                    }
+
+                    chunk.EpubTextFile.TextContent = textContent;
                     endnotesChapter.TextContent = htmlService.AddEndnote(explanation.SentenceExplanation, endnotesChapter.TextContent, seq, Path.GetFileName(chunk.EpubTextFile.AbsolutePath));
                 }
             }
