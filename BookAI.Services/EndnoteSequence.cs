@@ -20,7 +20,6 @@ public class EndnoteSequence(ILogger<EndnoteSequence> logger)
             sb.Insert(0, _symbols[charIndex]);
         }
 
-        sb.Append("AI");
         var result = sb.ToString();
         logger.LogDebug("Generated endnote refrerence sequence {Sequence}", result);
 

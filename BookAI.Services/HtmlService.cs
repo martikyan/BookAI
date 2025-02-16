@@ -35,11 +35,11 @@ public class HtmlService(ILogger<HtmlService> logger)
             node = htmlDocument.DocumentNode;
         }
 
-        var nodeToInsert = HtmlNode.CreateNode($"<a id=\"{sequence}\" href=\"{EpubService.EndnotesBookFileName}#{sequence}\">[{sequence}]</a>");
+        var nodeToInsert = HtmlNode.CreateNode($"<a id=\"{sequence}\" href=\"{EpubService.EndnotesBookFileName}#{sequence}\" style=\"font-size: 0.8em; vertical-align: super;\"><span>[{sequence}</span><span style=\"font-size: 0.8em; vertical-align: super;\">AI]</span>");
 
         sentence = Trim(sentence);
         var matchingBlock = FuzzySharp.Levenshtein.GetMatchingBlocks(node.InnerHtml, sentence).MaxBy(b => b.Length);
-        
+
         var beginning = matchingBlock.SourcePos;
         var length = sentence.Length - matchingBlock.DestPos;
         logger.LogInformation("Levenshtein suggested to place '{Sentence}' at position {Position} with length {Length}, count {Count} and destination position {DestinationPosition}", sentence, matchingBlock.SourcePos, matchingBlock.Length, matchingBlock.Length, matchingBlock.DestPos);
@@ -58,7 +58,8 @@ public class HtmlService(ILogger<HtmlService> logger)
                     logger.LogInformation("Found HTML position with less errors {PrevMin} vs {Min}", minErrors, currentErrors);
                     minHtml = currentHtml;
                     minErrors = currentErrors;
-                } else if (currentErrors == minErrors && i <= 0) // prefer index closer to 0 if min errors are the same
+                }
+                else if (currentErrors == minErrors && i <= 0) // prefer index closer to 0 if min errors are the same
                 {
                     minHtml = currentHtml;
                     minErrors = currentErrors;
@@ -135,7 +136,9 @@ public class HtmlService(ILogger<HtmlService> logger)
         htmlDocument.OptionWriteEmptyNodes = true;
 
         var endnotes = htmlDocument.GetElementbyId("endnotes");
-        endnotes.ChildNodes.Add(HtmlNode.CreateNode($"<p id=\"{sequence}\"><a href=\"{referenceFileName}#{sequence}\">[{sequence}]</a> {endnote}</p>"));
+        endnotes.ChildNodes.Add(HtmlNode.CreateNode(
+            $"<p id=\"{sequence}\"><a href=\"{referenceFileName}#{sequence}\" style=\"font-size: 0.8em; vertical-align: super;\"><span>[{sequence}</span><span style=\"font-size: 0.8em; vertical-align: super;\">AI]</span></a> {endnote}</p>"
+        ));
         return htmlDocument.DocumentNode.OuterHtml;
     }
 
