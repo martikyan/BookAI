@@ -149,6 +149,9 @@ public class HtmlService(ILogger<HtmlService> logger) : IHtmlService
         endnotes.ChildNodes.Add(HtmlNode.CreateNode(
             $"<p id=\"{sequence}\"><a href=\"{referenceFileName}#{sequence}\" style=\"font-size: 0.8em; vertical-align: super;\"><span>[{sequence}</span><span style=\"font-size: 0.8em; vertical-align: super;\">AI]</span></a> {endnote}</p>"
         ));
+        endnotes.ChildNodes.Add(HtmlNode.CreateNode(
+            $"<div style=\"page-break-after: always\"></div>"
+        ));
         return htmlDocument.DocumentNode.OuterHtml;
     }
 

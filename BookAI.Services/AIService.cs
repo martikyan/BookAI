@@ -61,8 +61,6 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
             ResponseFormat = chatResponseFormat
         }, cancellationToken: cancellationToken);
 
-        logger.LogDebug("Sending explanation secondary request");
-
         try
         {
             return JsonSerializer.Deserialize<ExplanationResponse>(response.Value.Content[0].Text, new JsonSerializerOptions
@@ -72,7 +70,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "Failed to deserialize response to confusion response. Defaulting to empty response. {@Response}", response);
+            logger.LogWarning(e, "Failed to deserialize response to confusion response. {@Response}", response);
             throw;
         }
     }
@@ -145,6 +143,58 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
         {
             logger.LogWarning(e, "Failed to deserialize response to confusion response. Defaulting to empty response. {@Response}", response);
             return new ConfusionResponse() { TextConfusionScores = Array.Empty<TextConfusionScore>() };
+        }
+    }
+
+    public async Task<EndnotesFixupResponse> FixupEndnotesAsync(string html, CancellationToken cancellationToken)
+    {
+        logger.LogDebug("Sending endnotes fixup request");
+
+        const string schemaJson = """
+                                  {
+                                      "required": ["fixedHtml"],
+                                      "type": "object",
+                                      "properties": {
+                                          "fixedHtml": {
+                                              "type": "string"
+                                          }
+                                      },
+                                      "additionalProperties": false
+                                  }
+                                  """;
+
+
+        var chatResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat("json_schema", BinaryData.FromString(schemaJson), jsonSchemaIsStrict: true);
+
+        var response = await chatClient.CompleteChatAsync(new ChatMessage[]
+        {
+            new SystemChatMessage("You are a text assistant."),
+            new UserChatMessage($"""
+                                    I'm going to send you HTML code containing endnotes from the book. Please remove duplicate information.
+                                    HTML:
+                                    ```
+                                    {html}
+                                    ```
+                                 """)
+        }, new ChatCompletionOptions
+        {
+            ResponseFormat = chatResponseFormat
+        }, cancellationToken: cancellationToken);
+
+        try
+        {
+            return JsonSerializer.Deserialize<EndnotesFixupResponse>(response.Value.Content[0].Text, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            })!;
+        }
+        catch (Exception e)
+        {
+            logger.LogWarning(e, "Failed to deserialize endnotes fixup response to confusion response. Defaulting to empty response. {@Response}", response);
+            return new EndnotesFixupResponse
+            {
+                FixedHtml = html,
+            };
         }
     }
 }

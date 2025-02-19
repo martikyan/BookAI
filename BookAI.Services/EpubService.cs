@@ -39,6 +39,12 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
             }
         });
 
+        logger.LogInformation("Performing endnotes fixup");
+
+        var endnotesChapter = GetEndnotesChapter(book);
+        // var fixupResponse = await aiService.FixupEndnotesAsync(endnotesChapter.TextContent, cancellationToken);
+        // endnotesChapter.TextContent = fixupResponse.FixedHtml;
+        // todo: use chunking?
         logger.LogInformation("Finished processing EPUB book");
 
         using var ms = new MemoryStream();
