@@ -54,7 +54,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
 
                                     Return a JSON with the followiong properties:
                                     "contextExplanation": a text explanation for the context
-                                    "sentenceExplanation": the explanation for the sentence
+                                    "sentenceExplanation": the explanation for the sentence (i.e. the footnote)
                                  """)
         }, new ChatCompletionOptions
         {
@@ -112,7 +112,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
 
                                  1. Summarize what the text is about in simple, clear language.
                                  2. Identify any sentences or segments that might be confusing or complex.
-                                 3. For each confusing sentence or segment, assign a confusion score from 0 to 10 (0 means very clear; 10 means extremely confusing). When rating, focus on factors such as ambiguous phrasing, complex sentence structure, and difficult vocabulary. While sentence length may influence clarity, treat it only as a secondary factor in your scoring.
+                                 3. For each confusing sentence or segment, assign a confusion score from 0 to 10 (0 means very clear; 10 means very confusing). When rating, focus on factors such as ambiguous phrasing, complex sentence structure, and difficult vocabulary. While sentence length may influence clarity, treat it only as a secondary factor in your scoring.
 
                                  For context, here is some previously provided text:```
                                  {chunk.Context}

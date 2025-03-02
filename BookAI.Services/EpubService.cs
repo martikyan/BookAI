@@ -11,7 +11,7 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
 {
     public const string EndnotesBookFileName = "endnotes.html";
     private readonly Lock _lock = new();
-    private readonly int _maxTotalLength = 10000;
+    private readonly int _maxTotalLength = 4000;
 
     public async Task<Stream> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken = default) // todo: force to pass cancellation token
     {
@@ -41,7 +41,7 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
 
         logger.LogInformation("Performing endnotes fixup");
 
-        var endnotesChapter = GetEndnotesChapter(book);
+        // var endnotesChapter = GetEndnotesChapter(book);
         // var fixupResponse = await aiService.FixupEndnotesAsync(endnotesChapter.TextContent, cancellationToken);
         // endnotesChapter.TextContent = fixupResponse.FixedHtml;
         // todo: use chunking?
