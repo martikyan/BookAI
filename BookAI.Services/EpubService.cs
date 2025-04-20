@@ -11,7 +11,7 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
 {
     public const string EndnotesBookFileName = "endnotes.html";
     private readonly Lock _lock = new();
-    private readonly int _maxTotalLength = 4000;
+    private readonly int _maxTotalLength = 2000;
 
     public async Task<Stream> ProcessBookAsync(Stream epubStream, CancellationToken cancellationToken = default) // todo: force to pass cancellation token
     {
@@ -102,9 +102,9 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
             FileName = EndnotesBookFileName,
             ContentType = EpubContentType.Xhtml11,
             TextContent = HtmlService.GetEmptyEndnotesContent(),
-            Href = GetRelativePath(epubBook, EndnotesBookFileName),
-            AbsolutePath = GetFilePath(epubBook, EndnotesBookFileName),
-            FullFilePath = GetRelativePath(epubBook, EndnotesBookFileName)
+            Href = GetPath(epubBook.Resources.Html.Last(), EndnotesBookFileName, f => f.Href),
+            AbsolutePath = GetPath(epubBook.Resources.Html.Last(), EndnotesBookFileName, f => f.AbsolutePath),
+            FullFilePath = GetPath(epubBook.Resources.Html.Last(), EndnotesBookFileName, f => f.FullFilePath),
         };
 
         epubBook.Resources.Html.Add(newFile);
@@ -112,8 +112,8 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
         {
             Title = "Endnotes",
             Previous = epubBook.TableOfContents.Last(),
-            AbsolutePath = GetFilePath(epubBook, EndnotesBookFileName),
-            RelativePath = GetRelativePath(epubBook, EndnotesBookFileName)
+            AbsolutePath = GetPath(epubBook.TableOfContents.Last(), EndnotesBookFileName, f => f.AbsolutePath),
+            RelativePath = GetPath(epubBook.TableOfContents.Last(), EndnotesBookFileName, f => f.RelativePath),
         });
         epubBook.TableOfContents.SkipLast(1).Last().Next = epubBook.TableOfContents.Last();
 
@@ -124,12 +124,12 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
         SetInternalProperty(spineRef, "IdRef", EndnotesBookFileName);
         SetInternalProperty(spineRef, "Linear", true);
         SetInternalProperty(manifestItem, "Id", EndnotesBookFileName);
-        SetInternalProperty(manifestItem, "Href", GetRelativePath(epubBook, EndnotesBookFileName));
+        SetInternalProperty(manifestItem, "Href", GetPath(epubBook.Format.Opf.Manifest.Items.Last(), EndnotesBookFileName, i => i.Href));
         SetInternalProperty(manifestItem, "MediaType", "application/xhtml+xml");
 
         navPoint.NavLabelText = "Endnotes";
         navPoint.Class = "chapter";
-        navPoint.ContentSrc = GetRelativePath(epubBook, EndnotesBookFileName);
+        navPoint.ContentSrc = GetPath(epubBook.Format.Ncx.NavMap.NavPoints.Last(), EndnotesBookFileName, i => i.ContentSrc);
         navPoint.Id = EndnotesBookFileName;
         navPoint.PlayOrder = epubBook.Format.Ncx.NavMap.NavPoints.Select(p => p.PlayOrder).Max() + 1;
 
@@ -138,6 +138,31 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
         epubBook.Format.Ncx.NavMap.NavPoints.Add(navPoint);
 
         return newFile;
+    }
+
+    private string GetPath<T>(T last, string? fileName, Func<T, string> pathSelector)
+    {
+        var originalPath = pathSelector(last);
+        var originalFileName = Path.GetFileName(originalPath);
+
+        if (string.IsNullOrEmpty(originalFileName))
+        {
+            return originalPath;
+        }
+
+        if (string.IsNullOrEmpty(fileName))
+        {
+            throw new ArgumentException("File name is required in case of path selector returns a file path");
+        }
+
+        var directory = Path.GetDirectoryName(originalPath);
+        if (string.IsNullOrEmpty(directory))
+        {
+            throw new InvalidOperationException("Directory path is unknown in case of path selector");
+        }
+
+        return Path.Combine(directory, fileName);
+
     }
 
     private void SetInternalProperty(object obj, string propertyName, object value)
@@ -284,25 +309,5 @@ public class EpubService(IHtmlService htmlService, IAIService aiService, Endnote
         {
             contextQueue.Dequeue();
         }
-    }
-
-    private string GetRelativePath(EpubBook book, string filename)
-    {
-        return Path.GetRelativePath("/", GetFilePath(book, filename));
-    }
-
-    private string GetFilePath(EpubBook book, string filename)
-    {
-        return Path.Combine(GetFilesPath(book), filename);
-    }
-
-    private string GetFilesPath(EpubBook book)
-    {
-        if (!book.TableOfContents.Any())
-        {
-            throw new InvalidOperationException("Table of contentx is required to get files path");
-        }
-
-        return Path.GetDirectoryName(book.TableOfContents[book.TableOfContents.Count / 2].AbsolutePath)!;
     }
 }

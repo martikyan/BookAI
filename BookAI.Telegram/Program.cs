@@ -11,9 +11,9 @@ var host = builder.Build();
 
 var scope = host.Services.CreateScope();
 var service = scope.ServiceProvider.GetRequiredService<EpubService>();
-var file = File.OpenRead("/users/user/Downloads/Behave_The_Biology_of_Humans_at_Our_Best_and_Worst_by_Robert_M_Sapolsky.epub");
+var file = File.OpenRead("/users/user/Downloads/Educated_The_Sunday_Times_and_New_York_Times_bestselling_memoir.epub");
 
 var bookStream = await service.ProcessBookAsync(file, CancellationToken.None);
 
-using var fs = File.OpenWrite("/users/user/Desktop/fix.epub");
+using var fs = File.OpenWrite("/users/user/Desktop/AI_Educated_The_Sunday_Times_and_New_York_Times_bestselling_memoir.epub");
 await bookStream.CopyToAsync(fs);

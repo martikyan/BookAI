@@ -1,8 +1,10 @@
+using System.ClientModel;
 using System.Text.Json;
 using BookAI.Services.Abstraction;
 using BookAI.Services.Models;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
+using Polly;
 using ChatMessage = OpenAI.Chat.ChatMessage;
 using ChatResponseFormat = OpenAI.Chat.ChatResponseFormat;
 
@@ -10,7 +12,42 @@ namespace BookAI.Services;
 
 public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAIService
 {
+    private readonly ResiliencePipeline pipeline = new ResiliencePipelineBuilder()
+        .AddRetry(new()
+        {
+            ShouldHandle = new PredicateBuilder().Handle<ClientResultException>(e => e.Message.Contains("rate_limit_exceeded")),
+            BackoffType = DelayBackoffType.Exponential,
+            Delay = TimeSpan.FromMilliseconds(50),
+            OnRetry = r =>
+            {
+                logger.LogWarning("Throttling, attempt {AttemptNumber}", r.AttemptNumber);
+                return ValueTask.CompletedTask;
+            },
+        })
+        .AddTimeout(TimeSpan.FromMinutes(1))
+        .Build();
+
     public async Task<ExplanationResponse> ExplainAsync(string sentence, Chunk chunk, CancellationToken cancellationToken)
+    {
+        return await RetryOpenAIAsync(() => InternalExplainAsync(sentence, chunk, cancellationToken));
+    }
+
+    public async Task<ConfusionResponse> EvaluateConfusionAsync(Chunk chunk, CancellationToken cancellationToken)
+    {
+        return await RetryOpenAIAsync(() => InternalEvaluateConfusionAsync(chunk, cancellationToken));
+    }
+
+    public async Task<EndnotesFixupResponse> FixupEndnotesAsync(string html, CancellationToken cancellationToken)
+    {
+        return await RetryOpenAIAsync(() => InternalFixupEndnotesAsync(html, cancellationToken));
+    }
+
+    private async Task<T> RetryOpenAIAsync<T>(Func<Task<T>> func)
+    {
+        return await pipeline.ExecuteAsync(async _ => await func());
+    }
+
+    private async Task<ExplanationResponse> InternalExplainAsync(string sentence, Chunk chunk, CancellationToken cancellationToken)
     {
         logger.LogDebug("Sending explanation request");
 
@@ -47,11 +84,11 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
                                  
                                     Also, please clarify the meaning of the following sentence, as it appears particularly confusing and provide a footnote that can be added to the end of the sentence as the footnote for that sentence:
                                     Sentence: '{sentence}'.
-
+                                 
                                     1. Briefly explain the context
                                     2. Explain the sentence '{sentence}'
                                     3. Please avoid starting the explanation like 'This sentence means...' or 'That sentence is...' or something like that.
-
+                                 
                                     Return a JSON with the followiong properties:
                                     "contextExplanation": a text explanation for the context
                                     "sentenceExplanation": the explanation for the sentence (i.e. the footnote)
@@ -75,7 +112,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
         }
     }
 
-    public async Task<ConfusionResponse> EvaluateConfusionAsync(Chunk chunk, CancellationToken cancellationToken)
+    private async Task<ConfusionResponse> InternalEvaluateConfusionAsync(Chunk chunk, CancellationToken cancellationToken)
     {
         const string schemaJson = """
                                   {
@@ -146,7 +183,7 @@ public class AIService(ChatClient chatClient, ILogger<AIService> logger) : IAISe
         }
     }
 
-    public async Task<EndnotesFixupResponse> FixupEndnotesAsync(string html, CancellationToken cancellationToken)
+    private async Task<EndnotesFixupResponse> InternalFixupEndnotesAsync(string html, CancellationToken cancellationToken)
     {
         logger.LogDebug("Sending endnotes fixup request");
 

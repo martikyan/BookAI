@@ -36,7 +36,7 @@ public class CalibreService(ILogger<CalibreService> logger) : ICalibreService
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "ebook-convert",
-                Arguments = $"\"{originalTempFile}\" \"{convertedTempFile}\"",
+                Arguments = $"\"{originalTempFile}\" \"{convertedTempFile}\" --dont-split-on-page-breaks",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
